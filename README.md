@@ -3,11 +3,11 @@
 Production-ready Amazon/Flipkart-style marketplace built with **Clean Architecture**, **SOLID** principles, **FastAPI**, **SQLAlchemy**, **JWT/OAuth2**, **Jinja2 + Bootstrap 5**, **Redis**, **Celery**, and **Stripe/Razorpay** sandbox payments.
 
 **Preferred URL:** [http://127.0.0.1:8908](http://127.0.0.1:8908)  
-(`http://localhost:8908` redirects here so Windows/Docker IPv6 does not stall images.)  
+(`http://localhost:8908` redirects HTML only — CSS/JS stay same-origin so styles apply.)  
 **API docs (Swagger):** [http://127.0.0.1:8908/docs](http://127.0.0.1:8908/docs)  
 **ReDoc:** [http://127.0.0.1:8908/redoc](http://127.0.0.1:8908/redoc)
 
-> On Windows + Docker Desktop, `localhost` prefers IPv6 (`::1`). That path is slow/broken for published ports, so every image request can take ~2s and the page looks frozen. ShopSphere redirects `localhost` → `127.0.0.1` and serves the original product photos from local files under `/static/images/` (no runtime CDN).
+> Prefer **127.0.0.1** on Windows/Docker. Redirecting stylesheets from `localhost` → `127.0.0.1` is treated as cross-origin by browsers and can leave the site unstyled. Product photos are local under `/static/images/` (no runtime CDN).
 
 ## Stack
 
@@ -28,6 +28,8 @@ Production-ready Amazon/Flipkart-style marketplace built with **Clean Architectu
 ## Features
 
 - Product catalog: categories, variants, inventory, images
+- Real-time inventory sync (Redis pub/sub + SSE) on product, seller, and admin pages
+- Multi-seller marketplace: storefronts, sold-by attribution, cart grouped by seller, admin approve/suspend
 - Shopping cart & wishlist
 - Checkout with tax, shipping rules, coupons/discount engine
 - Orders, invoices, shipping status, order history

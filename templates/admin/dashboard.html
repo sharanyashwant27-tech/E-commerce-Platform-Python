@@ -101,12 +101,16 @@
   </div>
   <div class="col-lg-4">
     <div class="border rounded p-3 bg-white h-100">
-      <h2 class="h6 mb-3">Low Stock</h2>
-      <ul class="list-group list-group-flush">
+      <h2 class="h6 mb-3">Low Stock <span class="small text-muted fw-normal">(live)</span></h2>
+      <p id="ss-inventory-live" class="small text-success d-none" aria-live="polite"></p>
+      <div id="ss-inventory-sync" class="d-none"></div>
+      <ul class="list-group list-group-flush" id="ss-low-stock-list">
         {% for item in analytics.low_stock_items %}
         <li class="list-group-item d-flex justify-content-between px-0">
           <span class="small">{{ item.product_name }} <span class="text-muted">({{ item.sku }})</span></span>
-          <span class="badge text-bg-danger">{{ item.stock }}</span>
+          <span class="badge text-bg-danger ss-stock-badge"
+                {% if item.variant_id is defined %}data-variant-id="{{ item.variant_id }}"{% endif %}
+                data-stock="{{ item.stock }}">{{ item.stock }}</span>
         </li>
         {% else %}
         <li class="list-group-item px-0 text-muted">Inventory looks healthy.</li>
@@ -176,10 +180,15 @@
           <td><a href="/stores/{{ s.slug }}">{{ s.store_name }}</a></td>
           <td>{{ s.user.email if s.user else '—' }}</td>
           <td>{{ 'Yes' if s.is_approved else 'No' }}</td>
-          <td>
+          <td class="text-nowrap">
             {% if not s.is_approved %}
             <form method="post" action="/admin/sellers/{{ s.id }}/approve" class="d-inline">
               <button class="btn btn-sm btn-warning" type="submit">Approve</button>
+            </form>
+            {% else %}
+            <form method="post" action="/admin/sellers/{{ s.id }}/suspend" class="d-inline"
+                  onsubmit="return confirm('Suspend this seller from the marketplace?');">
+              <button class="btn btn-sm btn-outline-danger" type="submit">Suspend</button>
             </form>
             {% endif %}
           </td>

@@ -42,11 +42,25 @@
   <div class="col-lg-5">
     <div class="border rounded p-3">
       <h2 class="h5">Order summary</h2>
-      {% for item in cart['items'] %}
+      {% for group in cart.get('seller_groups', []) or [] %}
+        <div class="small text-muted mt-2 mb-1">
+          Sold by
+          {% if group.store_slug %}<a href="/stores/{{ group.store_slug }}">{{ group.store_name }}</a>
+          {% else %}{{ group.store_name }}{% endif %}
+        </div>
+        {% for item in group['items'] %}
         <div class="d-flex justify-content-between small mb-1">
           <span>{{ item.product_name }} × {{ item.quantity }}</span>
           <span>₹{{ '%.2f'|format(item.line_total) }}</span>
         </div>
+        {% endfor %}
+      {% else %}
+        {% for item in cart['items'] %}
+        <div class="d-flex justify-content-between small mb-1">
+          <span>{{ item.product_name }} × {{ item.quantity }}</span>
+          <span>₹{{ '%.2f'|format(item.line_total) }}</span>
+        </div>
+        {% endfor %}
       {% endfor %}
       <hr>
       <div class="d-flex justify-content-between fw-bold">

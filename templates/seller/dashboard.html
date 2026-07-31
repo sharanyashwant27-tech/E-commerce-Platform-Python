@@ -84,21 +84,38 @@
   </div>
   <div class="col-lg-7">
     <h2 class="h5 mb-3">Your catalog & inventory</h2>
+    <p id="ss-inventory-live" class="small text-success d-none" aria-live="polite"></p>
+    <div id="ss-inventory-sync" class="d-none"
+         data-product-ids="{% for p in products %}{{ p.id }}{% if not loop.last %},{% endif %}{% endfor %}"
+         data-variant-ids="{% for p in products %}{% for v in p.variants %}{{ v.id }},{% endfor %}{% endfor %}"></div>
     <div class="table-responsive">
       <table class="table align-middle">
-        <thead><tr><th>Product</th><th>Price</th><th>Stock</th><th>Active</th></tr></thead>
+        <thead><tr><th>Product</th><th>Variant</th><th>Stock</th><th>Adjust</th></tr></thead>
         <tbody>
           {% for p in products %}
-          <tr>
-            <td><a href="/products/{{ p.slug }}">{{ p.name }}</a></td>
-            <td>₹{{ '%.2f'|format(p.base_price) }}</td>
-            <td>
-              {% set ns = namespace(total=0) %}
-              {% for v in p.variants %}{% set ns.total = ns.total + v.stock %}{% endfor %}
-              {{ ns.total }}
-            </td>
-            <td>{{ 'Yes' if p.is_active else 'No' }}</td>
-          </tr>
+            {% for v in p.variants %}
+            <tr>
+              <td><a href="/products/{{ p.slug }}">{{ p.name }}</a></td>
+              <td class="small">{{ v.name }} <span class="text-muted">({{ v.sku }})</span></td>
+              <td>
+                <span class="badge ss-stock-badge {% if v.stock < 5 %}text-bg-danger{% else %}text-bg-success{% endif %}"
+                      data-variant-id="{{ v.id }}" data-stock="{{ v.stock }}">{{ v.stock }}</span>
+              </td>
+              <td style="min-width:220px">
+                <form class="d-flex gap-1 align-items-center" data-inventory-adjust
+                      data-variant-id="{{ v.id }}" data-product-id="{{ p.id }}" data-product-name="{{ p.name }}">
+                  <input type="number" name="stock" class="form-control form-control-sm" value="{{ v.stock }}" min="0" style="max-width:88px">
+                  <button class="btn btn-sm btn-outline-primary" type="submit">Sync</button>
+                  <span class="small text-muted" data-inventory-status></span>
+                </form>
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td><a href="/products/{{ p.slug }}">{{ p.name }}</a></td>
+              <td colspan="3" class="text-muted small">No variants</td>
+            </tr>
+            {% endfor %}
           {% else %}
           <tr><td colspan="4" class="text-muted">No products yet.</td></tr>
           {% endfor %}

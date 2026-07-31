@@ -16,6 +16,13 @@
         >
       </div>
       <div class="fw-semibold"><a href="/products/{{ item.slug }}">{{ item.product_name }}</a></div>
+      {% if item.store_name %}
+      <div class="small text-muted">
+        Sold by
+        {% if item.store_slug %}<a href="/stores/{{ item.store_slug }}">{{ item.store_name }}</a>
+        {% else %}{{ item.store_name }}{% endif %}
+      </div>
+      {% endif %}
       <div class="ss-price">₹{{ '%.2f'|format(item.base_price) }}</div>
     </div>
   </div>

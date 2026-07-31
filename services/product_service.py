@@ -151,7 +151,7 @@ class ProductService:
             raise NotFoundError("Product not found")
         return product
 
-    async def get_by_slug(self, slug: str) -> Product:
+    async def get_by_slug(self, slug: str, *, require_approved_seller: bool = True) -> Product:
         result = await self.db.execute(
             select(Product)
             .options(
@@ -164,6 +164,12 @@ class ProductService:
         )
         product = result.scalar_one_or_none()
         if not product:
+            raise NotFoundError("Product not found")
+        if (
+            require_approved_seller
+            and product.seller
+            and not product.seller.is_approved
+        ):
             raise NotFoundError("Product not found")
         return product
 
@@ -208,6 +214,13 @@ class ProductService:
         if active_only:
             query = query.where(Product.is_active.is_(True))
             count_q = count_q.where(Product.is_active.is_(True))
+            # Public catalog only shows products from approved marketplace sellers
+            query = query.join(SellerProfile, Product.seller_id == SellerProfile.id).where(
+                SellerProfile.is_approved.is_(True)
+            )
+            count_q = count_q.join(SellerProfile, Product.seller_id == SellerProfile.id).where(
+                SellerProfile.is_approved.is_(True)
+            )
         if q:
             like = f"%{q}%"
             query = query.where(Product.name.ilike(like) | Product.description.ilike(like))
@@ -300,6 +313,17 @@ class ProductService:
             )
         )
         await self.db.flush()
+        from utils.inventory_sync import publish_inventory_update
+
+        publish_inventory_update(
+            variant_id=variant.id,
+            product_id=variant.product_id,
+            sku=variant.sku,
+            stock=variant.stock,
+            product_name=variant.product.name if variant.product else "",
+            reason=reason,
+            change=change,
+        )
         return variant
 
     async def add_review(

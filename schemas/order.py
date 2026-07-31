@@ -30,6 +30,8 @@ class OrderItemOut(BaseModel):
     unit_price: Decimal
     quantity: int
     line_total: Decimal
+    store_name: Optional[str] = None
+    store_slug: Optional[str] = None
 
     model_config = {"from_attributes": True}
 

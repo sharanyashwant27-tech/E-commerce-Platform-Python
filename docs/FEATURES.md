@@ -31,11 +31,12 @@ Customer journey: see [WORKFLOW.md](./WORKFLOW.md)
 
 | Feature | Status | Where |
 |--------|--------|--------|
-| Multi-seller marketplace | Done | Multiple stores, sold-by attribution, `/stores` |
+| Multi-seller marketplace | Done | Multi-store catalog, cart groups, seller isolation, approve/suspend |
 | Seller Registration | Done | Register as seller |
 | Seller storefront | Done | `/stores/{slug}` + `GET /api/v1/stores` |
 | Product Management | Done | `/seller` create form + API |
 | Inventory Management | Done | Seller dashboard + inventory API |
+| Real-Time Inventory Sync | Done | Redis pub/sub + SSE `/api/v1/inventory/stream`; live UI on product/seller/admin |
 | Pricing | Done | Product create/update prices |
 | Discounts | Done | Platform coupons (admin); compare-at price |
 | Orders | Done | Seller order list/status API |
@@ -55,7 +56,7 @@ Customer journey: see [WORKFLOW.md](./WORKFLOW.md)
 | Orders | Done | Recent orders + status updates |
 | Payments | Done | `GET /api/v1/admin/payments` |
 | Coupons | Done | Create/list APIs |
-| Inventory | Done | `GET /api/v1/admin/inventory` |
+| Inventory | Done | `GET /api/v1/admin/inventory` + real-time SSE sync |
 | Reports | Done | Sales report API + dashboard |
 | Analytics | Done | Revenue, orders, customers, low stock |
 | Customer Support | Done | `/support` tickets + admin tab |

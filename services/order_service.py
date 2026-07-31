@@ -30,13 +30,22 @@ from models.entities import (
     Payment,
     Product,
     ProductVariant,
+    SellerProfile,
     User,
 )
+from config.settings import settings
+from schemas.order import OrderItemOut, OrderOut, PaymentOut
 from utils.payment import PaymentGateway
 
 TAX_RATE = Decimal("0.18")
 FREE_SHIPPING_THRESHOLD = Decimal("999")
 FLAT_SHIPPING = Decimal("49")
+
+
+def _supports_row_locks() -> bool:
+    """Postgres supports FOR UPDATE; avoid AsyncSession.get_bind() (can deadlock)."""
+    url = (settings.database_url or "").lower()
+    return "postgres" in url
 
 
 class OrderService:
@@ -51,6 +60,76 @@ class OrderService:
 
     def _invoice_number(self) -> str:
         return f"INV-{datetime.now(timezone.utc).strftime('%Y%m')}{uuid.uuid4().hex[:6].upper()}"
+
+    async def _dialect_supports_for_update(self) -> bool:
+        """Prefer settings URL check — AsyncSession.get_bind can deadlock under aiosqlite."""
+        return _supports_row_locks()
+
+    async def _seller_for(self, user: User) -> Optional[SellerProfile]:
+        if user.role != UserRole.SELLER:
+            return None
+        return (
+            await self.db.execute(
+                select(SellerProfile).where(SellerProfile.user_id == user.id)
+            )
+        ).scalar_one_or_none()
+
+    def _seller_owns_all_items(self, order: Order, seller: SellerProfile) -> bool:
+        return bool(order.items) and all(i.seller_id == seller.id for i in order.items)
+
+    async def _store_map(self, seller_ids: set[int]) -> dict[int, SellerProfile]:
+        if not seller_ids:
+            return {}
+        rows = (
+            await self.db.execute(
+                select(SellerProfile).where(SellerProfile.id.in_(seller_ids))
+            )
+        ).scalars().all()
+        return {s.id: s for s in rows}
+
+    async def serialize_order(self, order: Order, user: User) -> OrderOut:
+        """Build OrderOut with store attribution; sellers only see their lines."""
+        seller = await self._seller_for(user)
+        items = list(order.items)
+        if seller:
+            items = [i for i in items if i.seller_id == seller.id]
+        stores = await self._store_map({i.seller_id for i in items})
+        item_outs: list[OrderItemOut] = []
+        for item in items:
+            store = stores.get(item.seller_id)
+            item_outs.append(
+                OrderItemOut(
+                    id=item.id,
+                    seller_id=item.seller_id,
+                    product_name=item.product_name,
+                    variant_name=item.variant_name,
+                    sku=item.sku,
+                    unit_price=item.unit_price,
+                    quantity=item.quantity,
+                    line_total=item.line_total,
+                    store_name=store.store_name if store else None,
+                    store_slug=store.slug if store else None,
+                )
+            )
+        payment = PaymentOut.model_validate(order.payment) if order.payment else None
+        return OrderOut(
+            id=order.id,
+            order_number=order.order_number,
+            status=order.status,
+            shipping_status=order.shipping_status,
+            subtotal=order.subtotal,
+            discount_amount=order.discount_amount,
+            shipping_amount=order.shipping_amount,
+            tax_amount=order.tax_amount,
+            total=order.total,
+            tracking_number=order.tracking_number,
+            invoice_number=order.invoice_number,
+            notes=order.notes,
+            created_at=order.created_at,
+            items=item_outs,
+            payment=payment,
+        )
+
 
     async def checkout(
         self,
@@ -68,11 +147,22 @@ class OrderService:
         if not address or address.user_id != user.id:
             raise NotFoundError("Shipping address not found")
 
-        # Validate stock & compute subtotal
+        # Lock variants then validate stock (prevents oversell races on Postgres).
+        variant_ids = [item.variant_id for item in cart.items]
+        q = (
+            select(ProductVariant)
+            .options(selectinload(ProductVariant.product))
+            .where(ProductVariant.id.in_(variant_ids))
+        )
+        if await self._dialect_supports_for_update():
+            q = q.with_for_update()
+        locked = (await self.db.execute(q)).scalars().all()
+        locked_by_id = {v.id: v for v in locked}
+
         subtotal = Decimal("0")
         line_data = []
         for item in cart.items:
-            variant = item.variant
+            variant = locked_by_id.get(item.variant_id) or item.variant
             if variant.stock < item.quantity:
                 raise InventoryError(
                     f"Insufficient stock for {variant.product.name} ({variant.name})"
@@ -171,6 +261,19 @@ class OrderService:
         await self.cart_service.clear(user)
         await self.db.flush()
 
+        from utils.inventory_sync import publish_inventory_update
+
+        for item, variant, _line_total in line_data:
+            publish_inventory_update(
+                variant_id=variant.id,
+                product_id=variant.product_id,
+                sku=variant.sku,
+                stock=variant.stock,
+                product_name=variant.product.name if variant.product else "",
+                reason="order_placed",
+                change=-item.quantity,
+            )
+
         order = await self.get_order(order.id, user)
         return {
             "order": order,
@@ -221,13 +324,7 @@ class OrderService:
         if user.role == UserRole.CUSTOMER and order.user_id != user.id:
             raise ForbiddenError("Not your order")
         if user.role == UserRole.SELLER:
-            from models.entities import SellerProfile
-
-            seller = (
-                await self.db.execute(
-                    select(SellerProfile).where(SellerProfile.user_id == user.id)
-                )
-            ).scalar_one_or_none()
+            seller = await self._seller_for(user)
             if not seller or not any(i.seller_id == seller.id for i in order.items):
                 raise ForbiddenError("Not your order")
         return order
@@ -242,13 +339,7 @@ class OrderService:
             q = q.where(Order.user_id == user.id)
             count_q = count_q.where(Order.user_id == user.id)
         elif user.role == UserRole.SELLER:
-            from models.entities import SellerProfile
-
-            seller = (
-                await self.db.execute(
-                    select(SellerProfile).where(SellerProfile.user_id == user.id)
-                )
-            ).scalar_one_or_none()
+            seller = await self._seller_for(user)
             if not seller:
                 return [], 0
             q = (
@@ -274,9 +365,29 @@ class OrderService:
             raise ValidationError(f"Cannot cancel order in status {order.status.value}")
         if order.status == OrderStatus.CANCELLED:
             return order
-        # Restock
+
+        # Sellers may only cancel orders where every line belongs to their store
+        if user.role == UserRole.SELLER:
+            seller = await self._seller_for(user)
+            if not seller or not self._seller_owns_all_items(order, seller):
+                raise ForbiddenError(
+                    "Cannot cancel a multi-seller marketplace order from the seller portal. "
+                    "Only the customer or an admin can cancel the full order."
+                )
+
+        # Restock with row locks (Postgres) + live inventory fan-out
+        restock_events = []
+        use_lock = await self._dialect_supports_for_update()
         for item in order.items:
-            variant = await self.db.get(ProductVariant, item.variant_id)
+            q = (
+                select(ProductVariant)
+                .options(selectinload(ProductVariant.product))
+                .where(ProductVariant.id == item.variant_id)
+            )
+            if use_lock:
+                q = q.with_for_update()
+            result = await self.db.execute(q)
+            variant = result.scalar_one_or_none()
             if variant:
                 variant.stock += item.quantity
                 self.db.add(
@@ -287,10 +398,25 @@ class OrderService:
                         reference=order.order_number,
                     )
                 )
+                restock_events.append((variant, item.quantity))
         order.status = OrderStatus.CANCELLED
         if order.payment and order.payment.status != PaymentStatus.REFUNDED:
             order.payment.status = PaymentStatus.FAILED
         await self.db.flush()
+
+        from utils.inventory_sync import publish_inventory_update
+
+        for variant, qty in restock_events:
+            publish_inventory_update(
+                variant_id=variant.id,
+                product_id=variant.product_id,
+                sku=variant.sku,
+                stock=variant.stock,
+                product_name=variant.product.name if variant.product else "",
+                reason="order_cancelled",
+                change=qty,
+            )
+
         from services.account_service import AccountService
 
         await AccountService(self.db).notify(
@@ -312,6 +438,17 @@ class OrderService:
         if user.role not in (UserRole.ADMIN, UserRole.SELLER):
             raise ForbiddenError("Insufficient permissions")
         order = await self.get_order(order_id, user)
+
+        # Sellers can only ship/fulfill orders that contain solely their items
+        if user.role == UserRole.SELLER:
+            seller = await self._seller_for(user)
+            if not seller or not self._seller_owns_all_items(order, seller):
+                raise ForbiddenError(
+                    "Cannot update fulfillment for a multi-seller marketplace order. "
+                    "An admin must coordinate shared shipments, or only sole-seller orders "
+                    "can be updated from the seller portal."
+                )
+
         order.status = status
         if tracking_number:
             order.tracking_number = tracking_number
@@ -336,14 +473,28 @@ class OrderService:
         )
         customer = await self.db.get(User, order.user_id)
         if customer:
-            try:
-                notify_order_status.delay(customer.email, order.order_number, status.value)
-            except Exception:
-                send_email(
-                    customer.email,
-                    f"Order {order.order_number} update",
-                    f"<p>Your order status is now <strong>{status.value}</strong>.</p>",
-                )
+            import logging
+            import threading
+
+            email = customer.email
+            order_number = order.order_number
+            status_value = status.value
+
+            def _enqueue_status_email() -> None:
+                try:
+                    notify_order_status.delay(email, order_number, status_value)
+                except Exception:
+                    logging.getLogger(__name__).debug(
+                        "Celery notify_order_status unavailable; sync email fallback",
+                        exc_info=True,
+                    )
+                    send_email(
+                        email,
+                        f"Order {order_number} update",
+                        f"<p>Your order status is now <strong>{status_value}</strong>.</p>",
+                    )
+
+            threading.Thread(target=_enqueue_status_email, daemon=True).start()
 
         return await self.get_order(order_id, user)
 
@@ -460,6 +611,7 @@ class OrderService:
         ).all()
         low_stock_list = [
             {
+                "variant_id": v.id,
                 "sku": v.sku,
                 "product_name": p.name,
                 "stock": v.stock,

@@ -5,50 +5,61 @@
   --ss-sand: #f7f3eb;
   --ss-ink: #1b1b1b;
   --ss-muted: #5c6770;
+  --ss-card: #ffffff;
+  --ss-line: rgba(11, 37, 69, 0.1);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   min-height: 100vh;
+  margin: 0;
   display: flex;
   flex-direction: column;
   color: var(--ss-ink);
   background:
-    radial-gradient(1200px 400px at 10% -10%, rgba(240, 162, 2, 0.12), transparent 60%),
-    linear-gradient(180deg, #fff 0%, var(--ss-sand) 100%);
-  font-family: "Segoe UI", "Gill Sans", Candara, Calibri, sans-serif;
+    radial-gradient(1000px 380px at 8% -8%, rgba(240, 162, 2, 0.14), transparent 55%),
+    linear-gradient(180deg, #ffffff 0%, var(--ss-sand) 100%);
+  font-family: "Segoe UI", Candara, Calibri, sans-serif;
+  line-height: 1.5;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+main {
+  flex: 1 0 auto;
 }
 
 .ss-nav {
   background: linear-gradient(90deg, var(--ss-navy), var(--ss-navy-2));
   z-index: 1030;
-  position: sticky;
-  top: 0;
 }
 
-/* Prevent collapsed mobile menu / overlays from trapping clicks when closed */
-.navbar-collapse:not(.show) {
-  pointer-events: none;
-}
-.navbar-collapse.show {
-  pointer-events: auto;
-}
-@media (min-width: 992px) {
-  .navbar-collapse {
-    pointer-events: auto !important;
-  }
+.ss-nav .navbar-brand,
+.ss-nav .nav-link {
+  color: #fff !important;
 }
 
-a, button, .btn {
-  position: relative;
-  z-index: 1;
+.ss-nav .nav-link:hover {
+  color: var(--ss-amber) !important;
 }
 
 .ss-hero {
-  /* Local-only backdrop — avoids slow/blocked external image fetches */
   background:
-    radial-gradient(800px 320px at 85% 20%, rgba(240, 162, 2, 0.28), transparent 55%),
-    radial-gradient(700px 360px at 15% 80%, rgba(255, 255, 255, 0.08), transparent 50%),
+    radial-gradient(700px 280px at 85% 20%, rgba(240, 162, 2, 0.3), transparent 55%),
     linear-gradient(120deg, #0b2545 0%, #13315c 55%, #0b2545 100%);
+  color: #fff;
 }
 
 .ss-eyebrow {
@@ -60,40 +71,36 @@ a, button, .btn {
 }
 
 .ss-product {
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid rgba(11, 37, 69, 0.08);
+  background: var(--ss-card);
+  border: 1px solid var(--ss-line);
   border-radius: 0.75rem;
-  padding: 0.75rem;
+  padding: 0.85rem;
+  height: 100%;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .ss-product:hover {
   transform: translateY(-3px);
-  box-shadow: 0 10px 24px rgba(11, 37, 69, 0.08);
+  box-shadow: 0 10px 24px rgba(11, 37, 69, 0.1);
 }
 
-/* Padding-box aspect ratio — avoids zero-height collapses from % height */
 .ss-product-img,
 .ss-placeholder {
-  position: relative;
   width: 100%;
-  padding-top: 100%;
-  background: #dbe4ef;
+  aspect-ratio: 1 / 1;
+  background: #e8eef5;
   border-radius: 0.5rem;
   overflow: hidden;
-  display: block;
+  margin-bottom: 0.65rem;
 }
 
 .ss-product-img img,
 .ss-placeholder img {
-  position: absolute;
-  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
   border: 0;
-  background: #dbe4ef;
 }
 
 .ss-price {
@@ -102,15 +109,16 @@ a, button, .btn {
 }
 
 .ss-stat {
-  background: #fff;
-  border: 1px solid rgba(11, 37, 69, 0.08);
+  background: var(--ss-card);
+  border: 1px solid var(--ss-line);
   border-radius: 0.75rem;
   padding: 1rem 1.1rem;
 }
 
 .ss-footer {
   background: #fff;
-  border-top: 1px solid rgba(11, 37, 69, 0.08);
+  border-top: 1px solid var(--ss-line);
+  flex-shrink: 0;
 }
 
 .ss-form .form-control:focus,
@@ -129,7 +137,6 @@ a, button, .btn {
 .ss-detail-img img {
   width: 100%;
   height: auto;
-  min-height: 240px;
   max-height: 520px;
   object-fit: cover;
   display: block;
@@ -141,7 +148,7 @@ a, button, .btn {
   flex-wrap: wrap;
   gap: 0.5rem 0;
   background: #fff;
-  border: 1px solid rgba(11, 37, 69, 0.08);
+  border: 1px solid var(--ss-line);
   border-radius: 0.75rem;
   padding: 1rem 0.75rem;
 }
@@ -189,3 +196,12 @@ a, button, .btn {
   color: var(--ss-navy);
 }
 
+/* Fallback if Bootstrap CSS is slow: keep a readable layout */
+.container {
+  width: 100%;
+  max-width: 1140px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}

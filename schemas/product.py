@@ -46,6 +46,7 @@ class VariantCreate(BaseModel):
 
 class VariantOut(BaseModel):
     id: int
+    product_id: int
     sku: str
     name: str
     attributes_json: Optional[str] = None

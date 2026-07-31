@@ -136,6 +136,22 @@ async def approve_seller(
     return MessageOut(message=f"Seller '{seller.store_name}' approved")
 
 
+@router.post("/sellers/{seller_id}/suspend", response_model=MessageOut)
+async def suspend_seller(
+    seller_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _: Annotated[User, Depends(require_roles(UserRole.ADMIN))],
+):
+    """Revoke marketplace approval — store/products leave the public catalog."""
+    result = await db.execute(select(SellerProfile).where(SellerProfile.id == seller_id))
+    seller = result.scalar_one_or_none()
+    if not seller:
+        raise NotFoundError("Seller not found")
+    seller.is_approved = False
+    await db.flush()
+    return MessageOut(message=f"Seller '{seller.store_name}' suspended")
+
+
 @router.get("/products", response_model=List[ProductListItem])
 async def admin_products(
     db: Annotated[AsyncSession, Depends(get_db)],

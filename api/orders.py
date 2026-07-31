@@ -6,10 +6,8 @@ from fastapi import APIRouter, Depends, Query
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from sqlalchemy import select
-
 from auth.deps import get_current_active_user, require_roles
-from models.entities import SellerProfile, User
+from models.entities import User
 from models.session import get_db
 from schemas.order import (
     CheckoutRequest,
@@ -32,15 +30,17 @@ async def checkout(
     db: Annotated[AsyncSession, Depends(get_db)],
     user: Annotated[User, Depends(get_current_active_user)],
 ):
-    result = await OrderService(db).checkout(
+    service = OrderService(db)
+    result = await service.checkout(
         user=user,
         address_id=payload.address_id,
         payment_provider=payload.payment_provider,
         coupon_code=payload.coupon_code,
         notes=payload.notes,
     )
+    order_out = await service.serialize_order(result["order"], user)
     return CheckoutResponse(
-        order=result["order"],
+        order=order_out,
         client_secret=result.get("client_secret"),
         razorpay_order_id=result.get("razorpay_order_id"),
         message=result["message"],
@@ -54,9 +54,11 @@ async def list_orders(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
 ):
-    orders, total = await OrderService(db).list_orders(user, page, page_size)
+    service = OrderService(db)
+    orders, total = await service.list_orders(user, page, page_size)
+    items = [await service.serialize_order(o, user) for o in orders]
     return {
-        "items": [OrderOut.model_validate(o) for o in orders],
+        "items": items,
         "total": total,
         "page": page,
         "page_size": page_size,
@@ -69,7 +71,9 @@ async def cancel_order(
     db: Annotated[AsyncSession, Depends(get_db)],
     user: Annotated[User, Depends(get_current_active_user)],
 ):
-    return await OrderService(db).cancel_order(user, payload.order_id)
+    service = OrderService(db)
+    order = await service.cancel_order(user, payload.order_id)
+    return await service.serialize_order(order, user)
 
 
 @router.get("/orders/{id}", response_model=OrderOut)
@@ -78,15 +82,9 @@ async def get_order(
     db: Annotated[AsyncSession, Depends(get_db)],
     user: Annotated[User, Depends(get_current_active_user)],
 ):
-    order = await OrderService(db).get_order(id, user)
-    out = OrderOut.model_validate(order)
-    if user.role == UserRole.SELLER:
-        seller = (
-            await db.execute(select(SellerProfile).where(SellerProfile.user_id == user.id))
-        ).scalar_one_or_none()
-        if seller:
-            out.items = [i for i in out.items if i.seller_id == seller.id]
-    return out
+    service = OrderService(db)
+    order = await service.get_order(id, user)
+    return await service.serialize_order(order, user)
 
 
 @router.post("/orders/{id}/confirm-payment", response_model=OrderOut)
@@ -96,9 +94,11 @@ async def confirm_payment(
     db: Annotated[AsyncSession, Depends(get_db)],
     user: Annotated[User, Depends(get_current_active_user)],
 ):
-    return await OrderService(db).confirm_payment(
+    service = OrderService(db)
+    order = await service.confirm_payment(
         user, id, payload.provider_payment_id, payload.provider_order_id
     )
+    return await service.serialize_order(order, user)
 
 
 @router.patch("/orders/{id}/status", response_model=OrderOut)
@@ -108,13 +108,15 @@ async def update_status(
     db: Annotated[AsyncSession, Depends(get_db)],
     user: Annotated[User, Depends(require_roles(UserRole.SELLER, UserRole.ADMIN))],
 ):
-    return await OrderService(db).update_status(
+    service = OrderService(db)
+    order = await service.update_status(
         user,
         id,
         payload.status,
         payload.tracking_number,
         payload.shipping_status,
     )
+    return await service.serialize_order(order, user)
 
 
 @router.get("/orders/{id}/invoice")
@@ -123,7 +125,12 @@ async def download_invoice(
     db: Annotated[AsyncSession, Depends(get_db)],
     user: Annotated[User, Depends(get_current_active_user)],
 ):
-    order = await OrderService(db).get_order(id, user)
+    service = OrderService(db)
+    order = await service.get_order(id, user)
+    # Sellers only invoice their own lines from a marketplace order
+    seller = await service._seller_for(user)
+    if seller:
+        order.items = [i for i in order.items if i.seller_id == seller.id]
     pdf = build_invoice_pdf(order)
     filename = f"{order.invoice_number or order.order_number}.pdf"
     return Response(

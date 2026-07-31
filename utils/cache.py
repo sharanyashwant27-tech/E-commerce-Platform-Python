@@ -20,7 +20,12 @@ def get_redis():
     try:
         import redis
 
-        _client = redis.from_url(settings.redis_url, decode_responses=True)
+        _client = redis.from_url(
+            settings.redis_url,
+            decode_responses=True,
+            socket_connect_timeout=1.5,
+            socket_timeout=1.5,
+        )
         _client.ping()
         return _client
     except Exception:

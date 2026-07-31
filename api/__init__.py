@@ -9,6 +9,7 @@ from api import (
     cart,
     categories,
     coupons,
+    inventory,
     orders,
     products,
     reviews,
@@ -26,6 +27,7 @@ api_router.include_router(auth.router)
 api_router.include_router(products.router)
 api_router.include_router(categories.router)
 api_router.include_router(stores.router)
+api_router.include_router(inventory.router)
 
 # Cart: /cart /cart/add /cart/update /cart/remove
 api_router.include_router(cart.router)

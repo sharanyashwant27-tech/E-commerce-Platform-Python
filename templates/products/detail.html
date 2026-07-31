@@ -42,11 +42,21 @@
     <p class="text-secondary">{{ product.description }}</p>
 
     {% if product.variants %}
+    <div id="ss-inventory-sync" class="d-none"
+         data-product-ids="{{ product.id }}"
+         data-variant-ids="{% for v in product.variants if v.is_active %}{{ v.id }}{% if not loop.last %},{% endif %}{% endfor %}"></div>
+    <p id="ss-inventory-live" class="small text-success d-none mb-2" aria-live="polite"></p>
     <form action="/cart/add" method="post" class="mt-4">
       <label class="form-label">Variant</label>
-      <select name="variant_id" class="form-select mb-3">
+      <select name="variant_id" class="form-select mb-3" id="ss-variant-select">
         {% for v in product.variants if v.is_active %}
-          <option value="{{ v.id }}">{{ v.name }} — ₹{{ '%.2f'|format(v.price) }} ({{ v.stock }} in stock)</option>
+          <option
+            value="{{ v.id }}"
+            data-variant-id="{{ v.id }}"
+            data-stock="{{ v.stock }}"
+            data-label="{{ v.name }} — ₹{{ '%.2f'|format(v.price) }}"
+            {% if v.stock <= 0 %}disabled{% endif %}
+          >{{ v.name }} — ₹{{ '%.2f'|format(v.price) }} ({{ v.stock }} in stock)</option>
         {% endfor %}
       </select>
       <div class="input-group mb-3" style="max-width:160px">

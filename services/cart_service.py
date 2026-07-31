@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from utils.exceptions import InventoryError, NotFoundError, ValidationError
+from utils.exceptions import ForbiddenError, InventoryError, NotFoundError, ValidationError
 from models.entities import (
     Cart,
     CartItem,
@@ -107,9 +107,19 @@ class CartService:
 
     async def add_item(self, user: User, variant_id: int, quantity: int) -> dict:
         user_id = int(user.id)
-        variant = await self.db.get(ProductVariant, variant_id)
+        result = await self.db.execute(
+            select(ProductVariant)
+            .options(
+                selectinload(ProductVariant.product).selectinload(Product.seller),
+            )
+            .where(ProductVariant.id == variant_id)
+        )
+        variant = result.scalar_one_or_none()
         if not variant or not variant.is_active:
             raise NotFoundError("Variant not found")
+        seller = variant.product.seller if variant.product else None
+        if seller and not seller.is_approved:
+            raise ForbiddenError("This seller is not approved for marketplace sales")
         if variant.stock < quantity:
             raise InventoryError(f"Only {variant.stock} units available")
 
@@ -164,7 +174,10 @@ class WishlistService:
     async def list_items(self, user: User) -> List[dict]:
         result = await self.db.execute(
             select(WishlistItem)
-            .options(selectinload(WishlistItem.product).selectinload(Product.images))
+            .options(
+                selectinload(WishlistItem.product).selectinload(Product.images),
+                selectinload(WishlistItem.product).selectinload(Product.seller),
+            )
             .where(WishlistItem.user_id == user.id)
         )
         items = result.scalars().all()
@@ -174,6 +187,7 @@ class WishlistService:
             primary = next((i.url for i in images if i.is_primary), None)
             if not primary and images:
                 primary = images[0].url
+            seller = w.product.seller
             out.append(
                 {
                     "id": w.id,
@@ -182,6 +196,8 @@ class WishlistService:
                     "slug": w.product.slug,
                     "base_price": w.product.base_price,
                     "image_url": primary,
+                    "store_name": seller.store_name if seller else None,
+                    "store_slug": seller.slug if seller else None,
                 }
             )
         return out

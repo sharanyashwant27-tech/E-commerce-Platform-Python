@@ -34,11 +34,22 @@ class CartItemOut(BaseModel):
     line_total: Decimal
     stock: int
     image_url: Optional[str] = None
+    seller_id: Optional[int] = None
+    store_name: Optional[str] = None
+    store_slug: Optional[str] = None
+
+
+class SellerCartGroupOut(BaseModel):
+    store_name: str
+    store_slug: Optional[str] = None
+    items: List[CartItemOut] = Field(default_factory=list)
+    subtotal: Decimal = Decimal("0")
 
 
 class CartOut(BaseModel):
     id: int
     items: List[CartItemOut]
+    seller_groups: List[SellerCartGroupOut] = Field(default_factory=list)
     subtotal: Decimal
     item_count: int
 
@@ -54,6 +65,8 @@ class WishlistItemOut(BaseModel):
     slug: str
     base_price: Decimal
     image_url: Optional[str] = None
+    store_name: Optional[str] = None
+    store_slug: Optional[str] = None
 
 
 class CouponCreate(BaseModel):

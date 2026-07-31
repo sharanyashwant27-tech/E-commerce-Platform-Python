@@ -45,11 +45,20 @@
 <div class="row g-4">
   <div class="col-lg-8">
     <table class="table">
-      <thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th><th></th></tr></thead>
+      <thead><tr><th>Item</th><th>Seller</th><th>Qty</th><th>Price</th><th>Total</th><th></th></tr></thead>
       <tbody>
         {% for i in items %}
         <tr>
           <td>{{ i.product_name }} <span class="text-muted small">({{ i.variant_name }})</span></td>
+          <td class="small">
+            {% if i.store_slug %}
+              <a href="/stores/{{ i.store_slug }}">{{ i.store_name or 'Store' }}</a>
+            {% elif i.store_name %}
+              {{ i.store_name }}
+            {% else %}
+              —
+            {% endif %}
+          </td>
           <td>{{ i.quantity }}</td>
           <td>₹{{ '%.2f'|format(i.unit_price) }}</td>
           <td>₹{{ '%.2f'|format(i.line_total) }}</td>

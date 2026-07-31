@@ -1,10 +1,9 @@
-"""Redirect browser requests from localhost → 127.0.0.1 on Windows/Docker.
+"""Optional localhost → 127.0.0.1 redirect for HTML navigations only.
 
-Windows resolves ``localhost`` to ``::1`` first. Docker Desktop often has no
-working IPv6 publish on that address, so each asset request waits ~2s before
-falling back to IPv4. That makes images look broken and the tab appear stuck.
-
-Forcing the canonical host to 127.0.0.1 makes HTML + CSS + images use IPv4.
+IMPORTANT: Never redirect ``/static/*`` (or other assets). Browsers treat
+``localhost`` and ``127.0.0.1`` as different origins, so a cross-origin
+redirect on stylesheets/scripts causes CSS/JS to be ignored — the page
+renders as unstyled “mess”.
 """
 
 from __future__ import annotations
@@ -20,7 +19,26 @@ class LocalhostRedirectMiddleware(BaseHTTPMiddleware):
         if host != "localhost":
             return await call_next(request)
 
+        path = request.url.path or "/"
+        # Assets and APIs must stay same-origin as the page that requested them
+        if (
+            path.startswith("/static/")
+            or path.startswith("/uploads/")
+            or path.startswith("/api/")
+            or path.startswith("/docs")
+            or path.startswith("/redoc")
+            or path.startswith("/openapi")
+            or path == "/health"
+            or path == "/favicon.ico"
+        ):
+            return await call_next(request)
+
+        accept = (request.headers.get("accept") or "").lower()
+        # Only redirect top-level HTML navigations
+        if "text/html" not in accept and "*/*" not in accept:
+            return await call_next(request)
+
         port = request.url.port
         netloc = f"127.0.0.1:{port}" if port else "127.0.0.1"
         target = request.url.replace(netloc=netloc)
-        return RedirectResponse(url=str(target), status_code=307)
+        return RedirectResponse(url=str(target), status_code=302)

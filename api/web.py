@@ -387,22 +387,17 @@ async def order_detail(
 ):
     if not user:
         return RedirectResponse("/login", status_code=303)
-    order = await OrderService(db).get_order(order_id, user)
-    visible_items = list(order.items)
-    seller_profile = None
-    if user.role == UserRole.SELLER:
-        seller_profile = (
-            await db.execute(select(SellerProfile).where(SellerProfile.user_id == user.id))
-        ).scalar_one_or_none()
-        if seller_profile:
-            visible_items = [i for i in order.items if i.seller_id == seller_profile.id]
+    service = OrderService(db)
+    order = await service.get_order(order_id, user)
+    order_out = await service.serialize_order(order, user)
+    seller_profile = await service._seller_for(user) if user.role == UserRole.SELLER else None
     return templates.TemplateResponse(
         "orders/detail.html",
         _ctx(
             request,
             user,
             order=order,
-            visible_items=visible_items,
+            visible_items=order_out.items,
             seller_view=bool(seller_profile),
         ),
     )
@@ -454,6 +449,21 @@ async def admin_approve_seller_web(
     seller = await db.get(SellerProfile, seller_id)
     if seller:
         seller.is_approved = True
+        await db.flush()
+    return RedirectResponse("/admin", status_code=303)
+
+
+@router.post("/admin/sellers/{seller_id}/suspend")
+async def admin_suspend_seller_web(
+    seller_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    user: Annotated[Optional[User], Depends(get_optional_user)],
+):
+    if not user or user.role != UserRole.ADMIN:
+        return RedirectResponse("/login", status_code=303)
+    seller = await db.get(SellerProfile, seller_id)
+    if seller:
+        seller.is_approved = False
         await db.flush()
     return RedirectResponse("/admin", status_code=303)
 

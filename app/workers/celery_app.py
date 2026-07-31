@@ -19,4 +19,9 @@ celery_app.conf.update(
     enable_utc=True,
     task_track_started=True,
     worker_prefetch_multiplier=1,
+    # Avoid indefinite hangs when Redis broker is down (common in local/unit tests)
+    broker_connection_retry_on_startup=True,
+    broker_connection_timeout=2,
+    result_backend_transport_options={"socket_timeout": 2, "socket_connect_timeout": 2},
+    broker_transport_options={"socket_timeout": 2, "socket_connect_timeout": 2},
 )

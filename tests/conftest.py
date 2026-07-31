@@ -30,6 +30,16 @@ from main import app
 TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
 
 
+@pytest.fixture(scope="session", autouse=True)
+def _celery_eager_mode():
+    """Run Celery tasks inline during tests — no Redis broker required."""
+    from app.workers.celery_app import celery_app
+
+    celery_app.conf.task_always_eager = True
+    celery_app.conf.task_eager_propagates = True
+    yield
+
+
 @pytest.fixture(scope="session")
 def event_loop():
     loop = asyncio.new_event_loop()
