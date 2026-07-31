@@ -46,8 +46,7 @@ services:
       POSTGRES_USER: shopsphere
       POSTGRES_PASSWORD: shopsphere
       POSTGRES_DB: shopsphere
-    ports:
-      - "5432:5432"
+    # Keep Postgres internal-only so host :5432 conflicts do not block Compose
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -58,8 +57,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
+    # Keep Redis internal-only so host :6379 conflicts do not block Compose
 
 volumes:
   pgdata:
