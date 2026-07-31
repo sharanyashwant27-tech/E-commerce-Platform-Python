@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard — {{ app_name }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <div class="text-uppercase small text-muted fw-semibold letter-spacing">Admin Dashboard</div>
+    <h1 class="h3 mb-0">{{ app_name }} operations</h1>
+  </div>
+  <a href="/api/v1/admin/analytics" class="btn btn-outline-secondary btn-sm">JSON analytics</a>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-4 col-xl">
+    <div class="ss-stat"><div class="small text-muted">Today's Orders</div><div class="fs-4 fw-bold">{{ analytics.today_orders }}</div></div>
+  </div>
+  <div class="col-6 col-md-4 col-xl">
+    <div class="ss-stat"><div class="small text-muted">Revenue</div><div class="fs-4 fw-bold">₹{{ '%.2f'|format(analytics.total_revenue) }}</div><div class="small text-muted">Today ₹{{ '%.2f'|format(analytics.today_revenue) }}</div></div>
+  </div>
+  <div class="col-6 col-md-4 col-xl">
+    <div class="ss-stat"><div class="small text-muted">Pending Orders</div><div class="fs-4 fw-bold text-warning">{{ analytics.pending_orders }}</div></div>
+  </div>
+  <div class="col-6 col-md-4 col-xl">
+    <div class="ss-stat"><div class="small text-muted">Cancelled Orders</div><div class="fs-4 fw-bold text-danger">{{ analytics.cancelled_orders }}</div></div>
+  </div>
+  <div class="col-6 col-md-4 col-xl">
+    <div class="ss-stat"><div class="small text-muted">Low Stock</div><div class="fs-4 fw-bold">{{ analytics.low_stock_count }}</div></div>
+  </div>
+</div>
+
+<div class="row g-4 mb-4">
+  <div class="col-lg-6">
+    <div class="border rounded p-3 bg-white h-100">
+      <h2 class="h6 mb-3">Sales Graph</h2>
+      <canvas id="salesChart" height="140"></canvas>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="border rounded p-3 bg-white h-100">
+      <h2 class="h6 mb-3">Revenue Graph</h2>
+      <canvas id="revenueChart" height="140"></canvas>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4 mb-4">
+  <div class="col-lg-6">
+    <div class="border rounded p-3 bg-white h-100">
+      <h2 class="h6 mb-3">Top Selling Products</h2>
+      <table class="table table-sm align-middle mb-0">
+        <thead><tr><th>Product</th><th>Qty</th><th>Sales</th></tr></thead>
+        <tbody>
+          {% for p in analytics.top_selling_products %}
+          <tr>
+            <td>{{ p.name }}</td>
+            <td>{{ p.quantity_sold }}</td>
+            <td>₹{{ '%.2f'|format(p.sales) }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="3" class="text-muted">No sales data yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="border rounded p-3 bg-white h-100">
+      <h2 class="h6 mb-3">Recent Customers</h2>
+      <table class="table table-sm align-middle mb-0">
+        <thead><tr><th>Name</th><th>Email</th><th>Joined</th></tr></thead>
+        <tbody>
+          {% for c in analytics.recent_customers %}
+          <tr>
+            <td>{{ c.full_name }}</td>
+            <td class="small">{{ c.email }}</td>
+            <td class="small text-muted">{{ c.created_at[:10] if c.created_at else '—' }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="3" class="text-muted">No customers yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4 mb-4">
+  <div class="col-lg-4">
+    <div class="border rounded p-3 bg-white h-100">
+      <h2 class="h6 mb-3">Product Categories</h2>
+      <ul class="list-group list-group-flush">
+        {% for c in analytics.categories %}
+        <li class="list-group-item d-flex justify-content-between px-0">
+          <span>{{ c.name }}</span>
+          <span class="badge text-bg-secondary">{{ c.product_count }}</span>
+        </li>
+        {% else %}
+        <li class="list-group-item px-0 text-muted">No categories.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="border rounded p-3 bg-white h-100">
+      <h2 class="h6 mb-3">Low Stock</h2>
+      <ul class="list-group list-group-flush">
+        {% for item in analytics.low_stock_items %}
+        <li class="list-group-item d-flex justify-content-between px-0">
+          <span class="small">{{ item.product_name }} <span class="text-muted">({{ item.sku }})</span></span>
+          <span class="badge text-bg-danger">{{ item.stock }}</span>
+        </li>
+        {% else %}
+        <li class="list-group-item px-0 text-muted">Inventory looks healthy.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="border rounded p-3 bg-white h-100">
+      <h2 class="h6 mb-3">Notifications</h2>
+      {% for n in analytics.notifications %}
+      <div class="border-bottom py-2 small {% if not n.is_read %}fw-semibold{% endif %}">
+        <div>{{ n.title }}</div>
+        <div class="text-muted">{{ n.body }}</div>
+      </div>
+      {% else %}
+      <p class="text-muted small mb-0">No notifications yet.</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<div class="border rounded p-3 bg-white mb-4">
+  <h2 class="h6 mb-3">Recent Orders</h2>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead><tr><th>Order</th><th>Status</th><th>Shipping</th><th>Total</th><th></th></tr></thead>
+      <tbody>
+        {% for o in analytics.recent_orders %}
+        <tr>
+          <td><code>{{ o.order_number }}</code></td>
+          <td><span class="badge text-bg-secondary">{{ o.status.value }}</span></td>
+          <td class="small">{{ o.shipping_status.value }}</td>
+          <td>₹{{ '%.2f'|format(o.total) }}</td>
+          <td><a href="/orders/{{ o.id }}" class="btn btn-sm btn-outline-primary">View</a></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="text-muted">No orders yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<ul class="nav nav-tabs mb-3" role="tablist">
+  <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-users">Users</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-sellers">Sellers</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-support">Support</button></li>
+</ul>
+<div class="tab-content">
+  <div class="tab-pane fade show active" id="tab-users">
+    <table class="table table-hover">
+      <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Active</th></tr></thead>
+      <tbody>
+        {% for u in users %}
+        <tr><td>{{ u.full_name }}</td><td>{{ u.email }}</td><td>{{ u.role.value }}</td><td>{{ u.is_active }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="tab-pane fade" id="tab-sellers">
+    <table class="table table-hover">
+      <thead><tr><th>Store</th><th>Email</th><th>Approved</th></tr></thead>
+      <tbody>
+        {% for s in sellers %}
+        <tr><td>{{ s.store_name }}</td><td>{{ s.user.email if s.user else '—' }}</td><td>{{ s.is_approved }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="tab-pane fade" id="tab-support">
+    {% for t in tickets %}
+    <div class="border rounded p-3 mb-2">
+      <strong>{{ t.subject }}</strong> <span class="badge text-bg-secondary">{{ t.status }}</span>
+      <div class="small text-muted">User #{{ t.user_id }}</div>
+      <p class="mb-0">{{ t.message }}</p>
+    </div>
+    {% else %}
+    <p class="text-muted">No support tickets.</p>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+  const labels = {{ chart_labels_json | safe }};
+  const orders = {{ chart_orders_json | safe }};
+  const revenue = {{ chart_revenue_json | safe }};
+  const navy = '#0b2545';
+  const amber = '#f0a202';
+
+  new Chart(document.getElementById('salesChart'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{ label: 'Orders', data: orders, backgroundColor: navy }]
+    },
+    options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+  });
+
+  new Chart(document.getElementById('revenueChart'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Revenue (₹)',
+        data: revenue,
+        borderColor: amber,
+        backgroundColor: 'rgba(240,162,2,0.15)',
+        fill: true,
+        tension: 0.35
+      }]
+    },
+    options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+  });
+</script>
+{% endblock %}

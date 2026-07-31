@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Orders — {{ app_name }}{% endblock %}
+{% block content %}
+<h1 class="h3 mb-4">Order history</h1>
+{% if orders %}
+<div class="table-responsive">
+  <table class="table table-hover align-middle">
+    <thead>
+      <tr><th>Order</th><th>Date</th><th>Status</th><th>Shipping</th><th>Total</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for o in orders %}
+      <tr>
+        <td><code>{{ o.order_number }}</code></td>
+        <td class="small">{{ o.created_at }}</td>
+        <td><span class="badge text-bg-secondary">{{ o.status.value }}</span></td>
+        <td class="small">{{ o.shipping_status.value }}</td>
+        <td>₹{{ '%.2f'|format(o.total) }}</td>
+        <td><a href="/orders/{{ o.id }}" class="btn btn-sm btn-outline-primary">View</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="alert alert-light border">No orders yet.</div>
+{% endif %}
+{% endblock %}

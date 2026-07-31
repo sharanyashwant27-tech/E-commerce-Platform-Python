@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Support — {{ app_name }}{% endblock %}
+{% block content %}
+<h1 class="h3 mb-4">Customer support</h1>
+<div class="row g-4">
+  <div class="col-lg-5">
+    <form method="post" action="/support" class="ss-form border rounded p-3">
+      <h2 class="h6">Open a ticket</h2>
+      <div class="mb-3">
+        <label class="form-label">Subject</label>
+        <input name="subject" class="form-control" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Message</label>
+        <textarea name="message" class="form-control" rows="4" required></textarea>
+      </div>
+      <button class="btn btn-primary" type="submit">Submit</button>
+    </form>
+  </div>
+  <div class="col-lg-7">
+    <h2 class="h6">Your tickets</h2>
+    {% for t in tickets %}
+    <div class="border rounded p-3 mb-2">
+      <div class="d-flex justify-content-between">
+        <strong>{{ t.subject }}</strong>
+        <span class="badge text-bg-secondary">{{ t.status }}</span>
+      </div>
+      <p class="mb-1 mt-2">{{ t.message }}</p>
+      {% if t.admin_reply %}<div class="alert alert-light mb-0 small"><strong>Support:</strong> {{ t.admin_reply }}</div>{% endif %}
+    </div>
+    {% else %}
+    <p class="text-muted">No tickets yet.</p>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

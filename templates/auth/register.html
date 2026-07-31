@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Register — {{ app_name }}{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <h1 class="h3 mb-3">Create account</h1>
+    {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+    <form method="post" action="/register" class="ss-form">
+      <div class="mb-3">
+        <label class="form-label">Full name</label>
+        <input type="text" name="full_name" class="form-control" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Email</label>
+        <input type="email" name="email" class="form-control" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Password</label>
+        <input type="password" name="password" class="form-control" minlength="8" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Role</label>
+        <select name="role" class="form-select" id="roleSelect">
+          <option value="customer">Customer</option>
+          <option value="seller">Seller</option>
+        </select>
+      </div>
+      <div class="mb-3 d-none" id="storeField">
+        <label class="form-label">Store name</label>
+        <input type="text" name="store_name" class="form-control">
+      </div>
+      <button class="btn btn-warning w-100" type="submit">Sign up</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  const role = document.getElementById('roleSelect');
+  const store = document.getElementById('storeField');
+  role.addEventListener('change', () => {
+    store.classList.toggle('d-none', role.value !== 'seller');
+  });
+</script>
+{% endblock %}

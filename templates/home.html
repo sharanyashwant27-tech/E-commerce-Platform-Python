@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}{{ app_name }} — Shop Smart{% endblock %}
+
+{% block hero %}
+<section class="ss-hero">
+  <div class="container py-5">
+    <div class="row align-items-center">
+      <div class="col-lg-7">
+        <p class="ss-eyebrow mb-2">Marketplace</p>
+        <h1 class="display-5 fw-bold text-white mb-3">{{ app_name }}</h1>
+        <p class="lead text-white-50 mb-4">Discover deals across electronics, fashion, and home — with secure checkout and seller storefronts.</p>
+        <a href="/products" class="btn btn-warning btn-lg me-2">Browse products</a>
+        <a href="/register" class="btn btn-outline-light btn-lg">Become a seller</a>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block content %}
+{% if categories %}
+<section class="mb-5">
+  <h2 class="h4 mb-3">Categories</h2>
+  <div class="d-flex flex-wrap gap-2">
+    {% for c in categories %}
+      <a class="btn btn-outline-secondary btn-sm" href="/products?category_id={{ c.id }}">{{ c.name }}</a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if featured %}
+<section class="mb-5">
+  <div class="d-flex justify-content-between align-items-end mb-3">
+    <h2 class="h4 mb-0">Featured</h2>
+    <a href="/products?featured=1" class="small">View all</a>
+  </div>
+  <div class="row g-3">
+    {% for p in featured %}
+      {% include "partials/product_card.html" %}
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<section>
+  <div class="d-flex justify-content-between align-items-end mb-3">
+    <h2 class="h4 mb-0">Latest arrivals</h2>
+    <a href="/products" class="small">Shop all</a>
+  </div>
+  <div class="row g-3">
+    {% for p in products %}
+      {% include "partials/product_card.html" %}
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

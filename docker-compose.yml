@@ -1,0 +1,65 @@
+services:
+  web:
+    build: .
+    ports:
+      - "8908:8908"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://shopsphere:shopsphere@db:5432/shopsphere
+      DATABASE_URL_SYNC: postgresql://shopsphere:shopsphere@db:5432/shopsphere
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      HOST: 0.0.0.0
+      PORT: 8908
+      BASE_URL: http://localhost:8908
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - ./uploads:/app/uploads
+    command: >
+      sh -c "alembic upgrade head &&
+             python scripts/seed.py &&
+             uvicorn main:app --host 0.0.0.0 --port 8908"
+
+  worker:
+    build: .
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://shopsphere:shopsphere@db:5432/shopsphere
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+    depends_on:
+      - redis
+      - web
+    command: celery -A app.workers.celery_app.celery_app worker --loglevel=info
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: shopsphere
+      POSTGRES_PASSWORD: shopsphere
+      POSTGRES_DB: shopsphere
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shopsphere -d shopsphere"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+volumes:
+  pgdata:

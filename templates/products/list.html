@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Products — {{ app_name }}{% endblock %}
+{% block content %}
+<div class="row">
+  <aside class="col-lg-3 mb-4">
+    <h2 class="h5">Filters</h2>
+    <form method="get" action="/products">
+      <div class="mb-3">
+        <label class="form-label">Search</label>
+        <input type="text" name="q" value="{{ q }}" class="form-control">
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Category</label>
+        <select name="category_id" class="form-select">
+          <option value="">All</option>
+          {% for c in categories %}
+            <option value="{{ c.id }}" {% if category_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <p class="small text-muted">API also supports price & featured filters via <code>/api/v1/products</code>.</p>
+      <button class="btn btn-primary w-100" type="submit">Apply</button>
+    </form>
+  </aside>
+  <div class="col-lg-9">
+    <div class="d-flex justify-content-between mb-3">
+      <h1 class="h4 mb-0">Products</h1>
+      <span class="text-muted small">{{ total }} results</span>
+    </div>
+    <div class="row g-3">
+      {% for p in products %}
+        {% include "partials/product_card.html" %}
+      {% else %}
+        <div class="col-12"><div class="alert alert-light border">No products found.</div></div>
+      {% endfor %}
+    </div>
+    {% if pages > 1 %}
+    <nav class="mt-4">
+      <ul class="pagination">
+        {% for i in range(1, pages + 1) %}
+          <li class="page-item {% if i == page %}active{% endif %}">
+            <a class="page-link" href="/products?page={{ i }}&q={{ q }}{% if category_id %}&category_id={{ category_id }}{% endif %}">{{ i }}</a>
+          </li>
+        {% endfor %}
+      </ul>
+    </nav>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

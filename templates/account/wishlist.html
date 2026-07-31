@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Wishlist — {{ app_name }}{% endblock %}
+{% block content %}
+<h1 class="h3 mb-4">Wishlist</h1>
+<div class="row g-3">
+  {% for item in items %}
+  <div class="col-md-4">
+    <div class="border rounded p-3 h-100">
+      {% if item.image_url %}<img src="{{ item.image_url }}" class="img-fluid rounded mb-2" alt="">{% endif %}
+      <div class="fw-semibold"><a href="/products/{{ item.slug }}">{{ item.product_name }}</a></div>
+      <div class="ss-price">₹{{ '%.2f'|format(item.base_price) }}</div>
+    </div>
+  </div>
+  {% else %}
+  <div class="col-12"><div class="alert alert-light border">Wishlist is empty.</div></div>
+  {% endfor %}
+</div>
+{% endblock %}

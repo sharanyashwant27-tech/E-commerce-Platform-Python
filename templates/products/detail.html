@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}{{ product.name }} — {{ app_name }}{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb small mb-0">
+    <li class="breadcrumb-item"><a href="/products">Browse</a></li>
+    <li class="breadcrumb-item active">{{ product.name }}</li>
+  </ol>
+</nav>
+
+<div class="row g-4">
+  <div class="col-md-6">
+    {% set img = product.images[0].url if product.images else None %}
+    <div class="ss-detail-img">
+      {% if img %}
+        <img src="{{ img }}" alt="{{ product.name }}" class="img-fluid rounded">
+      {% else %}
+        <div class="ss-placeholder rounded" style="min-height:320px"></div>
+      {% endif %}
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="text-muted small">{{ product.brand or 'ShopSphere' }}</div>
+    <h1 class="h3">{{ product.name }}</h1>
+    <div class="mb-2">
+      <i class="bi bi-star-fill text-warning"></i> {{ product.average_rating }}
+      <span class="text-muted small">({{ product.review_count }} reviews)</span>
+    </div>
+    <div class="ss-price fs-3 mb-3">₹{{ '%.2f'|format(product.base_price) }}</div>
+    <p class="text-secondary">{{ product.description }}</p>
+
+    {% if product.variants %}
+    <form action="/cart/add" method="post" class="mt-4">
+      <label class="form-label">Variant</label>
+      <select name="variant_id" class="form-select mb-3">
+        {% for v in product.variants if v.is_active %}
+          <option value="{{ v.id }}">{{ v.name }} — ₹{{ '%.2f'|format(v.price) }} ({{ v.stock }} in stock)</option>
+        {% endfor %}
+      </select>
+      <div class="input-group mb-3" style="max-width:160px">
+        <span class="input-group-text">Qty</span>
+        <input type="number" name="quantity" value="1" min="1" class="form-control">
+      </div>
+      <button class="btn btn-warning btn-lg" type="submit"><i class="bi bi-cart-plus"></i> Add to cart</button>
+    </form>
+    <form action="/wishlist/add" method="post" class="mt-2">
+      <input type="hidden" name="product_id" value="{{ product.id }}">
+      <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-heart"></i> Wishlist</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<section class="mt-5" id="reviews">
+  <h2 class="h5 mb-3">Customer reviews</h2>
+
+  {% if review_ok %}
+    <div class="alert alert-success">Thanks — your review was submitted.</div>
+  {% endif %}
+  {% if review_error %}
+    <div class="alert alert-danger">{{ review_error }}</div>
+  {% endif %}
+
+  {% if user %}
+  <form action="/products/{{ product.slug }}/review" method="post" class="ss-form border rounded p-3 mb-4">
+    <h3 class="h6">Write a review</h3>
+    <div class="row g-2">
+      <div class="col-md-3">
+        <label class="form-label">Rating</label>
+        <select name="rating" class="form-select" required>
+          {% for n in [5,4,3,2,1] %}
+          <option value="{{ n }}">{{ n }} / 5</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-9">
+        <label class="form-label">Title</label>
+        <input type="text" name="title" class="form-control" placeholder="Great product">
+      </div>
+      <div class="col-12">
+        <label class="form-label">Comment</label>
+        <textarea name="body" class="form-control" rows="3" placeholder="Share your experience after delivery"></textarea>
+      </div>
+      <div class="col-12">
+        <button class="btn btn-primary" type="submit">Submit review</button>
+      </div>
+    </div>
+  </form>
+  {% else %}
+  <p class="text-muted"><a href="/login">Login</a> to leave a review after your order is delivered.</p>
+  {% endif %}
+
+  {% for r in reviews %}
+    <div class="border rounded p-3 mb-2">
+      <div class="fw-semibold">{{ r.title or 'Review' }} · {{ r.rating }}/5</div>
+      <div class="small text-muted">{{ r.created_at }}</div>
+      <p class="mb-0 mt-1">{{ r.body }}</p>
+    </div>
+  {% else %}
+    <p class="text-muted">No reviews yet.</p>
+  {% endfor %}
+</section>
+{% endblock %}

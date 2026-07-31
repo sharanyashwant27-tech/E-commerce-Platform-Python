@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Order {{ order.order_number }} — {{ app_name }}{% endblock %}
+{% block content %}
+{% set status = order.status.value %}
+{% set ship = order.shipping_status.value if order.shipping_status else 'not_shipped' %}
+{% set pay_status = order.payment.status.value if order.payment else '' %}
+{% set is_cod = order.payment and order.payment.provider.value == 'cod' %}
+{% set paid = is_cod or pay_status in ['captured', 'authorized'] or status in ['confirmed','processing','shipped','delivered'] %}
+{% set shipped = ship in ['packed','in_transit','out_for_delivery','delivered'] or status in ['shipped','delivered'] %}
+{% set delivered = status == 'delivered' or ship == 'delivered' %}
+
+<div class="d-flex justify-content-between align-items-start mb-3">
+  <div>
+    <h1 class="h3 mb-1">Order {{ order.order_number }}</h1>
+    <div class="text-muted small">Invoice {{ order.invoice_number }} · {{ order.created_at }}</div>
+  </div>
+  <span class="badge text-bg-primary">{{ status }}</span>
+</div>
+
+<ol class="ss-flow list-unstyled mb-4">
+  {% set steps = [
+    ('created', 'Order created', status != 'cancelled'),
+    ('payment', 'Payment', paid and status != 'cancelled'),
+    ('invoice', 'Invoice', status != 'cancelled'),
+    ('shipping', 'Shipping', shipped),
+    ('delivered', 'Delivered', delivered),
+    ('review', 'Review', delivered)
+  ] %}
+  {% for key, label, done in steps %}
+  <li class="ss-flow-step {% if done %}is-done{% endif %} {% if not done and key == 'shipping' and status not in ['cancelled','pending'] %}is-active{% endif %}">
+    <span class="ss-flow-dot">{% if done %}<i class="bi bi-check"></i>{% else %}{{ loop.index }}{% endif %}</span>
+    <span class="ss-flow-label">{{ label }}</span>
+  </li>
+  {% endfor %}
+</ol>
+
+{% if status == 'cancelled' %}
+  <div class="alert alert-warning">This order was cancelled.</div>
+{% endif %}
+
+<div class="row g-4">
+  <div class="col-lg-8">
+    <table class="table">
+      <thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th><th></th></tr></thead>
+      <tbody>
+        {% for i in order.items %}
+        <tr>
+          <td>{{ i.product_name }} <span class="text-muted small">({{ i.variant_name }})</span></td>
+          <td>{{ i.quantity }}</td>
+          <td>₹{{ '%.2f'|format(i.unit_price) }}</td>
+          <td>₹{{ '%.2f'|format(i.line_total) }}</td>
+          <td>
+            {% if delivered and i.variant and i.variant.product %}
+            <a class="small" href="/products/{{ i.variant.product.slug }}#reviews">Review</a>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <div class="border rounded p-3">
+      <h2 class="h6">Shipping</h2>
+      <div class="small mb-1">Status: <strong>{{ ship }}</strong></div>
+      <div class="small">Tracking: <strong>{{ order.tracking_number or 'Assigned after dispatch' }}</strong></div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="border rounded p-3">
+      <div class="d-flex justify-content-between"><span>Subtotal</span><span>₹{{ '%.2f'|format(order.subtotal) }}</span></div>
+      <div class="d-flex justify-content-between"><span>Discount</span><span>-₹{{ '%.2f'|format(order.discount_amount) }}</span></div>
+      <div class="d-flex justify-content-between"><span>Shipping</span><span>₹{{ '%.2f'|format(order.shipping_amount) }}</span></div>
+      <div class="d-flex justify-content-between"><span>Tax</span><span>₹{{ '%.2f'|format(order.tax_amount) }}</span></div>
+      <hr>
+      <div class="d-flex justify-content-between fw-bold"><span>Total</span><span>₹{{ '%.2f'|format(order.total) }}</span></div>
+      {% if order.payment %}
+      <div class="mt-2 small">
+        Payment: {{ order.payment.provider.value }} · {{ order.payment.status.value }}
+      </div>
+      {% endif %}
+      <a class="btn btn-outline-dark btn-sm mt-3 w-100" href="/orders/{{ order.id }}/invoice">
+        <i class="bi bi-file-earmark-pdf"></i> Download invoice PDF
+      </a>
+      {% if delivered %}
+      <p class="small text-muted mt-3 mb-0">Order delivered — leave a review from an item above.</p>
+      {% endif %}
+      <a class="btn btn-link btn-sm mt-2 w-100" href="/orders">Back to orders</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

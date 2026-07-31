@@ -1,0 +1,24 @@
+{% set img = namespace %}
+{% if p.images %}
+  {% set img = (p.images | selectattr('is_primary') | list | first) %}
+  {% if not img %}{% set img = p.images[0] %}{% endif %}
+{% endif %}
+<div class="col-6 col-md-4 col-lg-3">
+  <a href="/products/{{ p.slug }}" class="ss-product text-decoration-none text-dark d-block h-100">
+    <div class="ss-product-img mb-2">
+      {% if img %}
+        <img src="{{ img.url }}" alt="{{ p.name }}" loading="lazy">
+      {% else %}
+        <div class="ss-placeholder d-flex align-items-center justify-content-center">
+          <i class="bi bi-image text-muted fs-2"></i>
+        </div>
+      {% endif %}
+    </div>
+    <div class="small text-muted">{{ p.brand or 'ShopSphere' }}</div>
+    <div class="fw-semibold text-truncate">{{ p.name }}</div>
+    <div class="d-flex justify-content-between align-items-center mt-1">
+      <span class="ss-price">₹{{ '%.2f'|format(p.base_price) }}</span>
+      <span class="small text-muted"><i class="bi bi-star-fill text-warning"></i> {{ p.average_rating }}</span>
+    </div>
+  </a>
+</div>

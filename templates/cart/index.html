@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Cart — {{ app_name }}{% endblock %}
+{% block content %}
+<h1 class="h3 mb-4">Shopping cart</h1>
+{% if cart['items'] %}
+<div class="table-responsive">
+  <table class="table align-middle">
+    <thead><tr><th>Item</th><th>Price</th><th>Qty</th><th>Total</th></tr></thead>
+    <tbody>
+      {% for item in cart['items'] %}
+      <tr>
+        <td>
+          <div class="fw-semibold">{{ item.product_name }}</div>
+          <div class="small text-muted">{{ item.variant_name }}</div>
+        </td>
+        <td>₹{{ '%.2f'|format(item.unit_price) }}</td>
+        <td>{{ item.quantity }}</td>
+        <td>₹{{ '%.2f'|format(item.line_total) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<div class="d-flex justify-content-between align-items-center">
+  <div class="fs-5">Subtotal: <strong>₹{{ '%.2f'|format(cart.subtotal) }}</strong></div>
+  <a href="/checkout" class="btn btn-warning btn-lg">Proceed to checkout</a>
+</div>
+{% else %}
+<div class="alert alert-light border">Your cart is empty. <a href="/products">Continue shopping</a></div>
+{% endif %}
+{% endblock %}

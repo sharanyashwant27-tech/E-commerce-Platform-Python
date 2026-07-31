@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Account — {{ app_name }}{% endblock %}
+{% block content %}
+<h1 class="h3 mb-4">My account</h1>
+<div class="row g-4">
+  <div class="col-md-4">
+    <div class="border rounded p-3 mb-3">
+      <div class="fw-semibold">{{ user.full_name }}</div>
+      <div class="text-muted">{{ user.email }}</div>
+      <div class="mt-2">
+        <span class="badge text-bg-secondary">{{ user.role.value }}</span>
+        {% if user.is_verified %}<span class="badge text-bg-success">Verified</span>{% endif %}
+      </div>
+      <div class="mt-3 d-grid gap-2">
+        <a class="btn btn-outline-primary btn-sm" href="/wishlist">Wishlist</a>
+        <a class="btn btn-outline-primary btn-sm" href="/orders">Order history</a>
+        <a class="btn btn-outline-primary btn-sm" href="/support">Support</a>
+      </div>
+    </div>
+    <h2 class="h6">Notifications</h2>
+    {% for n in notifications[:5] %}
+      <div class="small border-bottom py-2 {% if not n.is_read %}fw-semibold{% endif %}">
+        {{ n.title }}<div class="text-muted">{{ n.body }}</div>
+      </div>
+    {% else %}
+      <p class="text-muted small">No notifications.</p>
+    {% endfor %}
+  </div>
+  <div class="col-md-8">
+    <h2 class="h5">Addresses</h2>
+    {% for a in addresses %}
+      <div class="border rounded p-3 mb-2">
+        <strong>{{ a.label }}</strong> — {{ a.full_name }}<br>
+        {{ a.line1 }}, {{ a.city }}, {{ a.state }} {{ a.postal_code }}
+      </div>
+    {% else %}
+      <p class="text-muted">No addresses on file.</p>
+    {% endfor %}
+    <form method="post" action="/account/address" class="ss-form border rounded p-3 mt-3">
+      <h3 class="h6">Add address</h3>
+      <div class="row g-2">
+        <div class="col-md-6"><input name="full_name" class="form-control" placeholder="Full name" required></div>
+        <div class="col-md-6"><input name="phone" class="form-control" placeholder="Phone" required></div>
+        <div class="col-12"><input name="line1" class="form-control" placeholder="Address line" required></div>
+        <div class="col-md-4"><input name="city" class="form-control" placeholder="City" required></div>
+        <div class="col-md-4"><input name="state" class="form-control" placeholder="State" required></div>
+        <div class="col-md-4"><input name="postal_code" class="form-control" placeholder="PIN" required></div>
+      </div>
+      <button class="btn btn-primary btn-sm mt-3" type="submit">Save address</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

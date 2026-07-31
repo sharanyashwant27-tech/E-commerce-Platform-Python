@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Checkout — {{ app_name }}{% endblock %}
+{% block content %}
+<h1 class="h3 mb-4">Checkout</h1>
+{% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+{% if not cart['items'] %}
+  <div class="alert alert-warning">Cart is empty. <a href="/products">Continue shopping</a></div>
+{% else %}
+<div class="row g-4">
+  <div class="col-lg-7">
+    <form method="post" action="/checkout" class="ss-form">
+      <h2 class="h5">Shipping address</h2>
+      {% if addresses %}
+        {% for a in addresses %}
+        <div class="form-check border rounded p-3 mb-2">
+          <input class="form-check-input" type="radio" name="address_id" id="addr{{ a.id }}" value="{{ a.id }}" {% if loop.first %}checked{% endif %} required>
+          <label class="form-check-label" for="addr{{ a.id }}">
+            <strong>{{ a.full_name }}</strong> · {{ a.phone }}<br>
+            {{ a.line1 }}, {{ a.city }}, {{ a.state }} {{ a.postal_code }}
+          </label>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="alert alert-info">No addresses yet. <a href="/account">Add one in your profile</a>.</div>
+      {% endif %}
+
+      <div class="mb-3 mt-3">
+        <label class="form-label">Coupon code</label>
+        <input type="text" name="coupon_code" class="form-control" placeholder="WELCOME10">
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Payment</label>
+        <select name="payment_provider" class="form-select">
+          <option value="cod">Cash on Delivery</option>
+          <option value="stripe">Stripe (sandbox)</option>
+          <option value="razorpay">Razorpay (sandbox)</option>
+        </select>
+      </div>
+      <button class="btn btn-warning btn-lg" type="submit" {% if not addresses %}disabled{% endif %}>Place order</button>
+    </form>
+  </div>
+  <div class="col-lg-5">
+    <div class="border rounded p-3">
+      <h2 class="h5">Order summary</h2>
+      {% for item in cart['items'] %}
+        <div class="d-flex justify-content-between small mb-1">
+          <span>{{ item.product_name }} × {{ item.quantity }}</span>
+          <span>₹{{ '%.2f'|format(item.line_total) }}</span>
+        </div>
+      {% endfor %}
+      <hr>
+      <div class="d-flex justify-content-between fw-bold">
+        <span>Subtotal</span><span>₹{{ '%.2f'|format(cart.subtotal) }}</span>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
