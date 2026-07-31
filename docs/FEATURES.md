@@ -31,7 +31,9 @@ Customer journey: see [WORKFLOW.md](./WORKFLOW.md)
 
 | Feature | Status | Where |
 |--------|--------|--------|
+| Multi-seller marketplace | Done | Multiple stores, sold-by attribution, `/stores` |
 | Seller Registration | Done | Register as seller |
+| Seller storefront | Done | `/stores/{slug}` + `GET /api/v1/stores` |
 | Product Management | Done | `/seller` create form + API |
 | Inventory Management | Done | Seller dashboard + inventory API |
 | Pricing | Done | Product create/update prices |

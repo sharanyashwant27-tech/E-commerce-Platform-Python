@@ -2,7 +2,12 @@ services:
   web:
     build: .
     ports:
-      - "8908:8908"
+      # IPv4 only. Do NOT also publish [::1]:8908 — Docker Desktop's IPv6 localhost
+      # proxy often accepts the connection then hangs. Browsers resolve "localhost"
+      # to ::1 first, get stuck on that dead proxy, and never fall back to 127.0.0.1.
+      # With only 127.0.0.1 published, ::1 refuses immediately and Happy Eyeballs
+      # falls back to IPv4 so http://localhost:8908 works.
+      - "127.0.0.1:8908:8908"
     env_file:
       - .env
     environment:
@@ -13,18 +18,41 @@ services:
       CELERY_RESULT_BACKEND: redis://redis:6379/2
       HOST: 0.0.0.0
       PORT: 8908
-      BASE_URL: http://localhost:8908
+      BASE_URL: http://127.0.0.1:8908
+      # Keep Docker responses snappy (disable SQL echo flood)
+      APP_ENV: production
+      DEBUG: "false"
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_started
     volumes:
+      # Mount app code so middleware/template/static fixes apply without image rebuild
+      - ./main.py:/app/main.py
+      - ./api:/app/api
+      - ./middleware:/app/middleware
+      - ./services:/app/services
+      - ./models:/app/models
+      - ./schemas:/app/schemas
+      - ./config:/app/config
+      - ./utils:/app/utils
+      - ./app:/app/app
       - ./uploads:/app/uploads
+      - ./static:/app/static
+      - ./templates:/app/templates
+      - ./scripts:/app/scripts
+      - ./migrations:/app/migrations
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8908/health', timeout=2)"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 15s
     command: >
       sh -c "alembic upgrade head &&
-             python scripts/seed.py &&
-             uvicorn main:app --host 0.0.0.0 --port 8908"
+             python scripts/seed.py &
+             exec uvicorn main:app --host 0.0.0.0 --port 8908 --proxy-headers --forwarded-allow-ips='*'"
 
   worker:
     build: .

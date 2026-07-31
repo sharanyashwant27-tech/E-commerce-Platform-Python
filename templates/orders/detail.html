@@ -37,13 +37,17 @@
 {% if status == 'cancelled' %}
   <div class="alert alert-warning">This order was cancelled.</div>
 {% endif %}
+{% if seller_view %}
+  <div class="alert alert-info">Seller view — showing only your line items from this marketplace order.</div>
+{% endif %}
 
+{% set items = visible_items if visible_items is defined else order.items %}
 <div class="row g-4">
   <div class="col-lg-8">
     <table class="table">
       <thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th><th></th></tr></thead>
       <tbody>
-        {% for i in order.items %}
+        {% for i in items %}
         <tr>
           <td>{{ i.product_name }} <span class="text-muted small">({{ i.variant_name }})</span></td>
           <td>{{ i.quantity }}</td>

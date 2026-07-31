@@ -19,12 +19,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN pip install --upgrade pip && pip install -r requirements.txt
 
-# App source (includes README.md at /app/README.md for in-image docs)
-COPY README.md .
+# Bake README first so /app/README.md is always present for in-image docs,
+# then copy the full application (static product photos, templates, API, etc.).
+COPY README.md /app/README.md
 COPY . .
 
-RUN mkdir -p uploads/products \
-    && test -f /app/README.md
+RUN mkdir -p uploads/products uploads/invoices \
+    && test -f /app/README.md \
+    && test -s /app/README.md \
+    && ls /app/static/images/*.jpg >/dev/null 2>&1 \
+    && echo "ShopSphere image OK — README.md and product photos included"
 
 EXPOSE 8908
 

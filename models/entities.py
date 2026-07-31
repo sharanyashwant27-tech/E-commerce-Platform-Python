@@ -156,6 +156,14 @@ class Product(Base, TimestampMixin):
         back_populates="product", cascade="all, delete-orphan"
     )
 
+    @property
+    def store_name(self) -> Optional[str]:
+        return self.seller.store_name if self.seller else None
+
+    @property
+    def store_slug(self) -> Optional[str]:
+        return self.seller.slug if self.seller else None
+
 
 class ProductVariant(Base, TimestampMixin):
     __tablename__ = "product_variants"

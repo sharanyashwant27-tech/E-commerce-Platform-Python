@@ -3,26 +3,67 @@
 {% block content %}
 <h1 class="h3 mb-4">Shopping cart</h1>
 {% if cart['items'] %}
-<div class="table-responsive">
-  <table class="table align-middle">
-    <thead><tr><th>Item</th><th>Price</th><th>Qty</th><th>Total</th></tr></thead>
-    <tbody>
-      {% for item in cart['items'] %}
-      <tr>
-        <td>
-          <div class="fw-semibold">{{ item.product_name }}</div>
-          <div class="small text-muted">{{ item.variant_name }}</div>
-        </td>
-        <td>₹{{ '%.2f'|format(item.unit_price) }}</td>
-        <td>{{ item.quantity }}</td>
-        <td>₹{{ '%.2f'|format(item.line_total) }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
+  {% if cart.get('seller_groups') %}
+    {% for group in cart['seller_groups'] %}
+    <div class="border rounded p-3 mb-3">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <div class="fw-semibold">
+          Sold by
+          {% if group.store_slug %}
+            <a href="/stores/{{ group.store_slug }}">{{ group.store_name }}</a>
+          {% else %}
+            {{ group.store_name }}
+          {% endif %}
+        </div>
+        <div class="small text-muted">Subtotal ₹{{ '%.2f'|format(group.subtotal) }}</div>
+      </div>
+      <div class="table-responsive">
+        <table class="table align-middle mb-0">
+          <thead><tr><th>Item</th><th>Price</th><th>Qty</th><th>Total</th></tr></thead>
+          <tbody>
+            {% for item in group['items'] %}
+            <tr>
+              <td>
+                <div class="d-flex align-items-center gap-3">
+                  <img src="{{ item.image_url or '/static/images/headphones.jpg' }}" alt="" width="56" height="56" class="rounded" style="object-fit:cover;width:56px;height:56px" onerror="this.onerror=null;this.src='/static/images/headphones.jpg'">
+                  <div>
+                    <div class="fw-semibold">{{ item.product_name }}</div>
+                    <div class="small text-muted">{{ item.variant_name }}</div>
+                  </div>
+                </div>
+              </td>
+              <td>₹{{ '%.2f'|format(item.unit_price) }}</td>
+              <td>{{ item.quantity }}</td>
+              <td>₹{{ '%.2f'|format(item.line_total) }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+  <div class="table-responsive">
+    <table class="table align-middle">
+      <thead><tr><th>Item</th><th>Price</th><th>Qty</th><th>Total</th></tr></thead>
+      <tbody>
+        {% for item in cart['items'] %}
+        <tr>
+          <td>
+            <div class="fw-semibold">{{ item.product_name }}</div>
+            <div class="small text-muted">{{ item.variant_name }}</div>
+          </td>
+          <td>₹{{ '%.2f'|format(item.unit_price) }}</td>
+          <td>{{ item.quantity }}</td>
+          <td>₹{{ '%.2f'|format(item.line_total) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
 <div class="d-flex justify-content-between align-items-center">
-  <div class="fs-5">Subtotal: <strong>₹{{ '%.2f'|format(cart.subtotal) }}</strong></div>
+  <div class="fs-5">Cart total: <strong>₹{{ '%.2f'|format(cart.subtotal) }}</strong></div>
   <a href="/checkout" class="btn btn-warning btn-lg">Proceed to checkout</a>
 </div>
 {% else %}

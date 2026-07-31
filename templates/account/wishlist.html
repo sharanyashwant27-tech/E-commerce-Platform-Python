@@ -6,7 +6,15 @@
   {% for item in items %}
   <div class="col-md-4">
     <div class="border rounded p-3 h-100">
-      {% if item.image_url %}<img src="{{ item.image_url }}" class="img-fluid rounded mb-2" alt="">{% endif %}
+      <div class="ss-product-img mb-2">
+        <img
+          src="{{ item.image_url or '/static/images/headphones.jpg' }}"
+          alt="{{ item.product_name }}"
+          class="img-fluid rounded"
+          loading="lazy"
+          onerror="this.onerror=null;this.src='/static/images/headphones.jpg';"
+        >
+      </div>
       <div class="fw-semibold"><a href="/products/{{ item.slug }}">{{ item.product_name }}</a></div>
       <div class="ss-price">₹{{ '%.2f'|format(item.base_price) }}</div>
     </div>

@@ -48,9 +48,17 @@ async def home(
     featured, _ = await service.list_products(featured=True, page_size=8)
     latest, _ = await service.list_products(page_size=12)
     categories = await service.list_categories()
+    stores = await service.list_stores()
     return templates.TemplateResponse(
         "home.html",
-        _ctx(request, user, featured=featured, products=latest, categories=categories),
+        _ctx(
+            request,
+            user,
+            featured=featured,
+            products=latest,
+            categories=categories,
+            stores=stores,
+        ),
     )
 
 
@@ -77,6 +85,45 @@ async def products_page(
             categories=categories,
             q=q or "",
             category_id=category_id,
+            page=page,
+            total=total,
+            pages=(total + 11) // 12,
+        ),
+    )
+
+
+@router.get("/stores", response_class=HTMLResponse)
+async def stores_page(
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    user: Annotated[Optional[User], Depends(get_optional_user)],
+):
+    stores = await ProductService(db).list_stores()
+    return templates.TemplateResponse(
+        "stores/list.html", _ctx(request, user, stores=stores)
+    )
+
+
+@router.get("/stores/{slug}", response_class=HTMLResponse)
+async def store_detail(
+    slug: str,
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    user: Annotated[Optional[User], Depends(get_optional_user)],
+    page: int = Query(1, ge=1),
+):
+    service = ProductService(db)
+    store = await service.get_store_by_slug(slug)
+    products, total = await service.list_products(
+        seller_id=store.id, page=page, page_size=12
+    )
+    return templates.TemplateResponse(
+        "stores/detail.html",
+        _ctx(
+            request,
+            user,
+            store=store,
+            products=products,
             page=page,
             total=total,
             pages=(total + 11) // 12,
@@ -341,8 +388,23 @@ async def order_detail(
     if not user:
         return RedirectResponse("/login", status_code=303)
     order = await OrderService(db).get_order(order_id, user)
+    visible_items = list(order.items)
+    seller_profile = None
+    if user.role == UserRole.SELLER:
+        seller_profile = (
+            await db.execute(select(SellerProfile).where(SellerProfile.user_id == user.id))
+        ).scalar_one_or_none()
+        if seller_profile:
+            visible_items = [i for i in order.items if i.seller_id == seller_profile.id]
     return templates.TemplateResponse(
-        "orders/detail.html", _ctx(request, user, order=order)
+        "orders/detail.html",
+        _ctx(
+            request,
+            user,
+            order=order,
+            visible_items=visible_items,
+            seller_view=bool(seller_profile),
+        ),
     )
 
 
@@ -381,6 +443,21 @@ async def admin_dashboard(
     )
 
 
+@router.post("/admin/sellers/{seller_id}/approve")
+async def admin_approve_seller_web(
+    seller_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    user: Annotated[Optional[User], Depends(get_optional_user)],
+):
+    if not user or user.role != UserRole.ADMIN:
+        return RedirectResponse("/login", status_code=303)
+    seller = await db.get(SellerProfile, seller_id)
+    if seller:
+        seller.is_approved = True
+        await db.flush()
+    return RedirectResponse("/admin", status_code=303)
+
+
 @router.get("/seller", response_class=HTMLResponse)
 async def seller_dashboard(
     request: Request,
@@ -394,6 +471,7 @@ async def seller_dashboard(
         await db.execute(select(SellerProfile).where(SellerProfile.user_id == user.id))
     ).scalar_one_or_none()
     seller_products = []
+    seller_orders = []
     if seller:
         result = await db.execute(
             select(Product)
@@ -401,6 +479,7 @@ async def seller_dashboard(
             .where(Product.seller_id == seller.id)
         )
         seller_products = result.scalars().all()
+        seller_orders, _ = await OrderService(db).list_orders(user, page=1, page_size=20)
     categories = await ProductService(db).list_categories()
     return templates.TemplateResponse(
         "seller/dashboard.html",
@@ -410,6 +489,8 @@ async def seller_dashboard(
             analytics=analytics,
             products=seller_products,
             categories=categories,
+            seller=seller,
+            seller_orders=seller_orders,
         ),
     )
 

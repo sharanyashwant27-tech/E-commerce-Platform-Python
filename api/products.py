@@ -29,6 +29,7 @@ async def list_products(
     db: Annotated[AsyncSession, Depends(get_db)],
     q: Optional[str] = None,
     category_id: Optional[int] = None,
+    seller_id: Optional[int] = None,
     featured: Optional[bool] = None,
     min_price: Optional[Decimal] = None,
     max_price: Optional[Decimal] = None,
@@ -39,6 +40,7 @@ async def list_products(
     products, total = await service.list_products(
         q=q,
         category_id=category_id,
+        seller_id=seller_id,
         featured=featured,
         min_price=min_price,
         max_price=max_price,
@@ -61,6 +63,8 @@ async def list_products(
                 review_count=p.review_count,
                 is_featured=p.is_featured,
                 primary_image=primary,
+                store_name=p.store_name,
+                store_slug=p.store_slug,
             )
         )
     return {"items": items, "total": total, "page": page, "page_size": page_size}

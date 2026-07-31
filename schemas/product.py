@@ -89,6 +89,16 @@ class ProductUpdate(BaseModel):
     is_featured: Optional[bool] = None
 
 
+class SellerStoreOut(BaseModel):
+    id: int
+    store_name: str
+    slug: str
+    description: Optional[str] = None
+    is_approved: bool
+
+    model_config = {"from_attributes": True}
+
+
 class ProductOut(BaseModel):
     id: int
     name: str
@@ -97,6 +107,8 @@ class ProductOut(BaseModel):
     brand: Optional[str] = None
     category_id: int
     seller_id: int
+    store_name: Optional[str] = None
+    store_slug: Optional[str] = None
     base_price: Decimal
     is_active: bool
     is_featured: bool
@@ -118,6 +130,8 @@ class ProductListItem(BaseModel):
     review_count: int
     is_featured: bool
     primary_image: Optional[str] = None
+    store_name: Optional[str] = None
+    store_slug: Optional[str] = None
 
     model_config = {"from_attributes": True}
 

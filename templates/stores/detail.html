@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}{{ store.store_name }} — {{ app_name }}{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb small mb-0">
+    <li class="breadcrumb-item"><a href="/stores">Stores</a></li>
+    <li class="breadcrumb-item active">{{ store.store_name }}</li>
+  </ol>
+</nav>
+<div class="mb-4">
+  <h1 class="h3 mb-1">{{ store.store_name }}</h1>
+  <p class="text-muted mb-0">{{ store.description or 'Official seller storefront on ShopSphere' }}</p>
+  <div class="small text-muted mt-1">{{ total }} products</div>
+</div>
+<div class="row g-3">
+  {% for p in products %}
+    {% include "partials/product_card.html" %}
+  {% else %}
+  <div class="col-12"><div class="alert alert-light border">This store has no products yet.</div></div>
+  {% endfor %}
+</div>
+{% if pages > 1 %}
+<nav class="mt-4">
+  <ul class="pagination">
+    {% for i in range(1, pages + 1) %}
+    <li class="page-item {% if i == page %}active{% endif %}">
+      <a class="page-link" href="/stores/{{ store.slug }}?page={{ i }}">{{ i }}</a>
+    </li>
+    {% endfor %}
+  </ul>
+</nav>
+{% endif %}
+{% endblock %}

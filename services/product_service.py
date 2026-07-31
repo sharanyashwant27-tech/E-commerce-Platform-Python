@@ -142,6 +142,7 @@ class ProductService:
                 selectinload(Product.variants),
                 selectinload(Product.images),
                 selectinload(Product.category),
+                selectinload(Product.seller),
             )
             .where(Product.id == product_id)
         )
@@ -157,6 +158,7 @@ class ProductService:
                 selectinload(Product.variants),
                 selectinload(Product.images),
                 selectinload(Product.category),
+                selectinload(Product.seller),
             )
             .where(Product.slug == slug)
         )
@@ -164,6 +166,25 @@ class ProductService:
         if not product:
             raise NotFoundError("Product not found")
         return product
+
+    async def get_store_by_slug(self, slug: str) -> SellerProfile:
+        result = await self.db.execute(
+            select(SellerProfile).where(
+                SellerProfile.slug == slug,
+                SellerProfile.is_approved.is_(True),
+            )
+        )
+        store = result.scalar_one_or_none()
+        if not store:
+            raise NotFoundError("Store not found")
+        return store
+
+    async def list_stores(self, approved_only: bool = True) -> Sequence[SellerProfile]:
+        q = select(SellerProfile).order_by(SellerProfile.store_name)
+        if approved_only:
+            q = q.where(SellerProfile.is_approved.is_(True))
+        result = await self.db.execute(q)
+        return result.scalars().all()
 
     async def list_products(
         self,
@@ -178,7 +199,10 @@ class ProductService:
         page_size: int = 20,
         active_only: bool = True,
     ) -> tuple[List[Product], int]:
-        query = select(Product).options(selectinload(Product.images))
+        query = select(Product).options(
+            selectinload(Product.images),
+            selectinload(Product.seller),
+        )
         count_q = select(func.count(Product.id))
 
         if active_only:

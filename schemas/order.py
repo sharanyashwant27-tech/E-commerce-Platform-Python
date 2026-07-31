@@ -23,6 +23,7 @@ class CheckoutRequest(BaseModel):
 
 class OrderItemOut(BaseModel):
     id: int
+    seller_id: int
     product_name: str
     variant_name: str
     sku: str

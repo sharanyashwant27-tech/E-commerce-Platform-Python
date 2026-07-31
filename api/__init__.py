@@ -12,6 +12,7 @@ from api import (
     orders,
     products,
     reviews,
+    stores,
     uploads,
     wishlist,
 )
@@ -21,9 +22,10 @@ api_router = APIRouter()
 # Authentication: /register /login /logout /forgot-password /reset-password
 api_router.include_router(auth.router)
 
-# Catalog
+# Catalog & marketplace stores
 api_router.include_router(products.router)
 api_router.include_router(categories.router)
+api_router.include_router(stores.router)
 
 # Cart: /cart /cart/add /cart/update /cart/remove
 api_router.include_router(cart.router)

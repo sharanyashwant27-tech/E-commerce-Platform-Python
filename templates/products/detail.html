@@ -10,18 +10,30 @@
 
 <div class="row g-4">
   <div class="col-md-6">
-    {% set img = product.images[0].url if product.images else None %}
+    {% set img = product.images[0].url if product.images else '/static/images/headphones.jpg' %}
     <div class="ss-detail-img">
-      {% if img %}
-        <img src="{{ img }}" alt="{{ product.name }}" class="img-fluid rounded">
-      {% else %}
-        <div class="ss-placeholder rounded" style="min-height:320px"></div>
-      {% endif %}
+      <img
+        src="{{ img }}"
+        alt="{{ product.name }}"
+        class="img-fluid rounded w-100"
+        width="800"
+        height="800"
+        loading="eager"
+        onerror="this.onerror=null;this.src='/static/images/headphones.jpg';"
+      >
     </div>
   </div>
   <div class="col-md-6">
     <div class="text-muted small">{{ product.brand or 'ShopSphere' }}</div>
     <h1 class="h3">{{ product.name }}</h1>
+    {% if product.seller %}
+    <div class="mb-2">
+      Sold by
+      <a href="/stores/{{ product.seller.slug }}" class="fw-semibold text-decoration-none">
+        {{ product.seller.store_name }}
+      </a>
+    </div>
+    {% endif %}
     <div class="mb-2">
       <i class="bi bi-star-fill text-warning"></i> {{ product.average_rating }}
       <span class="text-muted small">({{ product.review_count }} reviews)</span>

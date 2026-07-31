@@ -25,6 +25,7 @@ engine = create_async_engine(
     echo=settings.debug and not settings.is_production,
     future=True,
     connect_args=connect_args,
+    pool_pre_ping=True,
 )
 
 async_session_factory = async_sessionmaker(

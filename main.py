@@ -11,7 +11,7 @@ from api import api_router
 from api.web import router as web_router
 from app import __version__
 from config.settings import settings
-from middleware import register_exception_handlers
+from middleware import LocalhostRedirectMiddleware, register_exception_handlers
 from models.session import Base, engine
 import models.entities  # noqa: F401 — register metadata
 from utils.logging import get_logger, setup_logging
@@ -53,6 +53,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# Outermost: send browsers off localhost so static images do not stall on ::1
+app.add_middleware(LocalhostRedirectMiddleware)
 
 register_exception_handlers(app)
 

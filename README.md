@@ -2,9 +2,12 @@
 
 Production-ready Amazon/Flipkart-style marketplace built with **Clean Architecture**, **SOLID** principles, **FastAPI**, **SQLAlchemy**, **JWT/OAuth2**, **Jinja2 + Bootstrap 5**, **Redis**, **Celery**, and **Stripe/Razorpay** sandbox payments.
 
-**Local URL:** [http://localhost:8908](http://localhost:8908)  
-**API docs (Swagger):** [http://localhost:8908/docs](http://localhost:8908/docs)  
-**ReDoc:** [http://localhost:8908/redoc](http://localhost:8908/redoc)
+**Preferred URL:** [http://127.0.0.1:8908](http://127.0.0.1:8908)  
+(`http://localhost:8908` redirects here so Windows/Docker IPv6 does not stall images.)  
+**API docs (Swagger):** [http://127.0.0.1:8908/docs](http://127.0.0.1:8908/docs)  
+**ReDoc:** [http://127.0.0.1:8908/redoc](http://127.0.0.1:8908/redoc)
+
+> On Windows + Docker Desktop, `localhost` prefers IPv6 (`::1`). That path is slow/broken for published ports, so every image request can take ~2s and the page looks frozen. ShopSphere redirects `localhost` → `127.0.0.1` and serves the original product photos from local files under `/static/images/` (no runtime CDN).
 
 ## Stack
 
@@ -63,40 +66,46 @@ python scripts/seed.py
 python -m uvicorn main:app --host 0.0.0.0 --port 8908 --reload
 ```
 
-Open **http://localhost:8908**
+Open **http://127.0.0.1:8908** (preferred on Windows/Docker).
 
 ### Demo accounts
 
 | Role | Email | Password |
 |------|--------|----------|
 | Admin | `admin@shopsphere.local` | `Admin@12345` |
-| Seller | `seller@shopsphere.local` | `Seller@12345` |
+| Seller (Asha Electronics) | `seller@shopsphere.local` | `Seller@12345` |
+| Seller (CraftHaus Fashion) | `seller2@shopsphere.local` | `Seller@12345` |
+| Seller (HomeNest Living) | `seller3@shopsphere.local` | `Seller@12345` |
 | Customer | `customer@shopsphere.local` | `Customer@12345` |
 
-Coupon: `WELCOME10` (10% off, min ₹500)
+Coupon: `WELCOME10` (10% off, min ₹500)  
+Stores: `/stores`, `/stores/asha-electronics`, `/stores/crafthaus-fashion`, `/stores/homenest-living`
 
 ## Docker
 
 Repository: [sharanyashwant27-tech/E-commerce-Platform-Python](https://github.com/sharanyashwant27-tech/E-commerce-Platform-Python)
 
-The image is built from [`Dockerfile`](./Dockerfile). `README.md` is copied into the image at `/app/README.md`.
+The image is built from [`Dockerfile`](./Dockerfile). **`README.md` is baked into the image** at `/app/README.md` (also linked from the image OCI documentation label). Product photos live under `/app/static/images/` so the storefront does not need Unsplash/CDN at runtime.
 
 ### Build the image
 
 ```bash
 docker build -t shopsphere:latest .
+
+# Confirm README is inside the image
+docker run --rm shopsphere:latest cat /app/README.md | more
 ```
 
 ### Run the app container (SQLite-friendly quick start)
 
 ```bash
-docker run --rm -p 8908:8908 \
+docker run --rm -p 127.0.0.1:8908:8908 \
   -e SECRET_KEY=change-me-in-production \
-  -e BASE_URL=http://localhost:8908 \
+  -e BASE_URL=http://127.0.0.1:8908 \
   shopsphere:latest
 ```
 
-Open **http://localhost:8908**. Seed data after first boot if needed:
+Open **http://127.0.0.1:8908**. Seed data after first boot if needed:
 
 ```bash
 docker exec -it <container_id> python scripts/seed.py
@@ -108,9 +117,15 @@ docker exec -it <container_id> python scripts/seed.py
 docker compose up --build
 ```
 
-Services: `web` (:8908), `worker` (Celery), `db` (Postgres), `redis`.
+Services: `web` (`127.0.0.1:8908`), `worker` (Celery), `db` (Postgres, internal), `redis` (internal).
 
 Compose runs migrations and `scripts/seed.py` on web startup. Demo accounts are listed above.
+
+Read the in-container docs anytime:
+
+```bash
+docker compose exec web cat /app/README.md
+```
 
 ## Alembic
 

@@ -29,7 +29,11 @@ class CartService:
                 selectinload(Cart.items)
                 .selectinload(CartItem.variant)
                 .selectinload(ProductVariant.product)
-                .selectinload(Product.images)
+                .selectinload(Product.images),
+                selectinload(Cart.items)
+                .selectinload(CartItem.variant)
+                .selectinload(ProductVariant.product)
+                .selectinload(Product.seller),
             )
             .where(Cart.user_id == user_id)
         )
@@ -56,6 +60,7 @@ class CartService:
     def serialize(self, cart: Cart) -> dict:
         items = []
         subtotal = Decimal("0")
+        groups: dict[str, dict] = {}
         for item in cart.items:
             unit = item.variant.price
             line = unit * item.quantity
@@ -64,22 +69,38 @@ class CartService:
             primary = next((i.url for i in images if i.is_primary), None)
             if not primary and images:
                 primary = images[0].url
-            items.append(
-                {
-                    "id": item.id,
-                    "variant_id": item.variant_id,
-                    "quantity": item.quantity,
-                    "product_name": item.variant.product.name,
-                    "variant_name": item.variant.name,
-                    "unit_price": unit,
-                    "line_total": line,
-                    "stock": item.variant.stock,
-                    "image_url": primary,
+            seller = item.variant.product.seller
+            store_name = seller.store_name if seller else "ShopSphere"
+            store_slug = seller.slug if seller else None
+            row = {
+                "id": item.id,
+                "variant_id": item.variant_id,
+                "quantity": item.quantity,
+                "product_name": item.variant.product.name,
+                "variant_name": item.variant.name,
+                "unit_price": unit,
+                "line_total": line,
+                "stock": item.variant.stock,
+                "image_url": primary,
+                "store_name": store_name,
+                "store_slug": store_slug,
+                "seller_id": item.variant.product.seller_id,
+            }
+            items.append(row)
+            key = store_slug or "marketplace"
+            if key not in groups:
+                groups[key] = {
+                    "store_name": store_name,
+                    "store_slug": store_slug,
+                    "items": [],
+                    "subtotal": Decimal("0"),
                 }
-            )
+            groups[key]["items"].append(row)
+            groups[key]["subtotal"] += line
         return {
             "id": cart.id,
             "items": items,
+            "seller_groups": list(groups.values()),
             "subtotal": subtotal,
             "item_count": sum(i.quantity for i in cart.items),
         }

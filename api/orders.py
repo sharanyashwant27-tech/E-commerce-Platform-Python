@@ -6,8 +6,10 @@ from fastapi import APIRouter, Depends, Query
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from sqlalchemy import select
+
 from auth.deps import get_current_active_user, require_roles
-from models.entities import User
+from models.entities import SellerProfile, User
 from models.session import get_db
 from schemas.order import (
     CheckoutRequest,
@@ -76,7 +78,15 @@ async def get_order(
     db: Annotated[AsyncSession, Depends(get_db)],
     user: Annotated[User, Depends(get_current_active_user)],
 ):
-    return await OrderService(db).get_order(id, user)
+    order = await OrderService(db).get_order(id, user)
+    out = OrderOut.model_validate(order)
+    if user.role == UserRole.SELLER:
+        seller = (
+            await db.execute(select(SellerProfile).where(SellerProfile.user_id == user.id))
+        ).scalar_one_or_none()
+        if seller:
+            out.items = [i for i in out.items if i.seller_id == seller.id]
+    return out
 
 
 @router.post("/orders/{id}/confirm-payment", response_model=OrderOut)

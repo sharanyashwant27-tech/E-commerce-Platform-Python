@@ -29,6 +29,27 @@
 </section>
 {% endif %}
 
+{% if stores %}
+<section class="mb-5">
+  <div class="d-flex justify-content-between align-items-end mb-3">
+    <h2 class="h4 mb-0">Shop by store</h2>
+    <a href="/stores" class="small">All sellers</a>
+  </div>
+  <div class="row g-3">
+    {% for s in stores %}
+    <div class="col-md-4">
+      <a href="/stores/{{ s.slug }}" class="text-decoration-none text-dark">
+        <div class="border rounded p-3 h-100">
+          <div class="fw-semibold">{{ s.store_name }}</div>
+          <div class="small text-muted">{{ s.description or 'Seller storefront' }}</div>
+        </div>
+      </a>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
 {% if featured %}
 <section class="mb-5">
   <div class="d-flex justify-content-between align-items-end mb-3">
