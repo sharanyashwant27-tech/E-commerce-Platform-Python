@@ -205,3 +205,19 @@ main {
   padding-left: 1rem;
   padding-right: 1rem;
 }
+
+.ss-image-search-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.4rem;
+  padding: 0.4rem 0.65rem;
+  border-color: rgba(255, 255, 255, 0.55);
+  cursor: pointer;
+}
+
+.ss-image-search-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: #fff;
+  color: #fff;
+}

@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import Annotated, Optional
 
-from fastapi import APIRouter, Depends, Form, Query, Request
+from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
@@ -19,6 +19,8 @@ from services.product_service import ProductService
 from config.settings import settings
 from auth.security import create_access_token, create_refresh_token
 from utils.enums import PaymentProvider, UserRole
+from utils.exceptions import ValidationError
+from utils.image_search import ALLOWED_IMAGE_SUFFIXES
 from models.entities import Address, Product, SellerProfile, User
 from models.session import get_db
 from utils.email import send_email
@@ -88,6 +90,55 @@ async def products_page(
             page=page,
             total=total,
             pages=(total + 11) // 12,
+            search_type="text",
+            image_error=None,
+        ),
+    )
+
+
+@router.post("/products/search-by-image", response_class=HTMLResponse)
+async def products_search_by_image(
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    user: Annotated[Optional[User], Depends(get_optional_user)],
+    file: UploadFile = File(...),
+):
+    service = ProductService(db)
+    categories = await service.list_categories()
+    image_error = None
+    products = []
+    try:
+        suffix = Path(file.filename or "").suffix.lower()
+        if suffix and suffix not in ALLOWED_IMAGE_SUFFIXES:
+            raise ValidationError(
+                f"Unsupported image type. Allowed: {', '.join(sorted(ALLOWED_IMAGE_SUFFIXES))}"
+            )
+        content = await file.read()
+        if not content:
+            raise ValidationError("Empty image upload")
+        max_bytes = settings.max_upload_size_mb * 1024 * 1024
+        if len(content) > max_bytes:
+            raise ValidationError(f"File exceeds {settings.max_upload_size_mb}MB")
+        ranked = await service.search_by_image(content, limit=24)
+        products = [p for p, _ in ranked]
+    except ValidationError as exc:
+        image_error = exc.message if hasattr(exc, "message") else str(exc)
+
+    return templates.TemplateResponse(
+        "products/list.html",
+        _ctx(
+            request,
+            user,
+            products=products,
+            categories=categories,
+            q="",
+            category_id=None,
+            page=1,
+            total=len(products),
+            pages=1,
+            search_type="image",
+            image_error=image_error,
+            uploaded_name=file.filename or "image",
         ),
     )
 
@@ -476,13 +527,13 @@ async def seller_dashboard(
 ):
     if not user or user.role not in (UserRole.SELLER, UserRole.ADMIN):
         return RedirectResponse("/login", status_code=303)
-    analytics = await OrderService(db).seller_analytics(user)
     seller = (
         await db.execute(select(SellerProfile).where(SellerProfile.user_id == user.id))
     ).scalar_one_or_none()
     seller_products = []
     seller_orders = []
     if seller:
+        analytics = await OrderService(db).seller_analytics(user)
         result = await db.execute(
             select(Product)
             .options(selectinload(Product.variants), selectinload(Product.images))
@@ -490,6 +541,15 @@ async def seller_dashboard(
         )
         seller_products = result.scalars().all()
         seller_orders, _ = await OrderService(db).list_orders(user, page=1, page_size=20)
+    else:
+        # Admins (and sellers without a profile yet) can open /seller without 403.
+        analytics = {
+            "total_orders": 0,
+            "total_revenue": 0,
+            "total_products": 0,
+            "low_stock_count": 0,
+            "sales_by_day": [],
+        }
     categories = await ProductService(db).list_categories()
     return templates.TemplateResponse(
         "seller/dashboard.html",

@@ -16,7 +16,16 @@
   </div>
 </div>
 
-{% if seller and not seller.is_approved %}
+{% if not seller %}
+<div class="alert alert-info">
+  No seller storefront is linked to this account.
+  {% if user and user.role.value == 'admin' %}
+  Use the <a href="/admin">Admin dashboard</a> for marketplace management, or register a seller account to sell products.
+  {% else %}
+  Complete seller registration to create your storefront.
+  {% endif %}
+</div>
+{% elif not seller.is_approved %}
 <div class="alert alert-warning">Your seller account is pending admin approval. You can browse the dashboard, but product publishing is blocked until approved.</div>
 {% endif %}
 
@@ -79,7 +88,7 @@
       </div>
       <div class="mb-2"><input name="brand" class="form-control" placeholder="Brand"></div>
       <div class="mb-2"><input name="image_url" class="form-control" placeholder="Image URL (or upload via API)"></div>
-      <button class="btn btn-warning" type="submit" {% if seller and not seller.is_approved %}disabled{% endif %}>Create product</button>
+      <button class="btn btn-warning" type="submit" {% if not seller or not seller.is_approved %}disabled{% endif %}>Create product</button>
     </form>
   </div>
   <div class="col-lg-7">

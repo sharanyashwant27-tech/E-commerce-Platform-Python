@@ -8,7 +8,7 @@
   {# Local assets only — never load CSS via cross-origin localhost redirects #}
   <link href="/static/vendor/bootstrap/bootstrap.min.css?v=4" rel="stylesheet">
   <link href="/static/vendor/bootstrap-icons/bootstrap-icons.min.css?v=4" rel="stylesheet">
-  <link href="/static/css/style.css?v=4" rel="stylesheet">
+  <link href="/static/css/style.css?v=5" rel="stylesheet">
 </head>
 <body>
   <nav class="navbar navbar-expand-lg navbar-dark ss-nav sticky-top">
@@ -18,10 +18,23 @@
         <span class="navbar-toggler-icon"></span>
       </button>
       <div class="collapse navbar-collapse" id="navMain">
-        <form class="d-flex mx-lg-4 my-2 my-lg-0 flex-grow-1" action="/products" method="get" role="search">
-          <input class="form-control me-2" type="search" name="q" placeholder="Search products..." value="" aria-label="Search">
-          <button class="btn btn-warning" type="submit"><i class="bi bi-search"></i></button>
+        <form class="d-flex mx-lg-4 my-2 my-lg-0 flex-grow-1 align-items-center gap-1" action="/products" method="get" role="search">
+          <input class="form-control me-1" type="search" name="q" placeholder="Search products..." value="" aria-label="Search">
+          <button class="btn btn-warning" type="submit" title="Text search"><i class="bi bi-search"></i></button>
+          <label class="btn btn-outline-light ss-image-search-btn mb-0" title="Search by image">
+            <i class="bi bi-camera" aria-hidden="true"></i>
+            <span class="visually-hidden">Search by image</span>
+            <input
+              type="file"
+              name="file"
+              accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif"
+              class="d-none"
+              form="ss-image-search-form"
+              onchange="if (this.files && this.files.length) document.getElementById('ss-image-search-form').requestSubmit()"
+            >
+          </label>
         </form>
+        <form id="ss-image-search-form" class="d-none" action="/products/search-by-image" method="post" enctype="multipart/form-data"></form>
         <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-1">
           <li class="nav-item"><a class="nav-link" href="/products">Shop</a></li>
           <li class="nav-item"><a class="nav-link" href="/stores">Stores</a></li>

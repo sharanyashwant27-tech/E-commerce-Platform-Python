@@ -12,6 +12,7 @@ Customer journey: see [WORKFLOW.md](./WORKFLOW.md)
 | Forgot Password | Done | `/forgot-password`, `/reset-password` |
 | Email Verification | Done | `/verify-email`, register emails token |
 | Product Search | Done | `/products?q=` |
+| Image-Based Product Search | Done | Camera nav control, `/products/search-by-image`, `POST /api/v1/products/search-by-image` |
 | Categories | Done | Home + filters + API |
 | Filters | Done | Category (web); price/featured (API) |
 | Product Details | Done | `/products/{slug}` |

@@ -18,6 +18,7 @@ Swagger: `http://localhost:8908/docs`
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/products` | List/search products |
+| POST | `/products/search-by-image` | Visual search — multipart `file` image; returns ranked `items` with `match_score` |
 | GET | `/products/{id}` | Product details |
 | POST | `/products` | Create product (seller) |
 | PUT | `/products/{id}` | Update product (seller) |

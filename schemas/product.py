@@ -133,6 +133,7 @@ class ProductListItem(BaseModel):
     primary_image: Optional[str] = None
     store_name: Optional[str] = None
     store_slug: Optional[str] = None
+    match_score: Optional[float] = None
 
     model_config = {"from_attributes": True}
 

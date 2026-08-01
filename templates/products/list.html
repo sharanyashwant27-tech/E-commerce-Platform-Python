@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Products — {{ app_name }}{% endblock %}
+{% block title %}{% if search_type == 'image' %}Image search{% else %}Products{% endif %} — {{ app_name }}{% endblock %}
 {% block content %}
 <div class="row">
   <aside class="col-lg-3 mb-4">
@@ -18,20 +18,47 @@
           {% endfor %}
         </select>
       </div>
-      <p class="small text-muted">API also supports price & featured filters via <code>/api/v1/products</code>.</p>
-      <button class="btn btn-primary w-100" type="submit">Apply</button>
+      <button class="btn btn-primary w-100 mb-3" type="submit">Apply</button>
+    </form>
+    <form method="post" action="/products/search-by-image" enctype="multipart/form-data" class="border rounded p-3 bg-white">
+      <h3 class="h6">Search by image</h3>
+      <p class="small text-muted mb-2">Upload a photo to find visually similar products.</p>
+      <input class="form-control form-control-sm mb-2" type="file" name="file" accept="image/*" required>
+      <button class="btn btn-outline-primary btn-sm w-100" type="submit">
+        <i class="bi bi-camera"></i> Find matches
+      </button>
     </form>
   </aside>
   <div class="col-lg-9">
     <div class="d-flex justify-content-between mb-3">
-      <h1 class="h4 mb-0">Products</h1>
+      <h1 class="h4 mb-0">
+        {% if search_type == 'image' %}
+          Image search results
+        {% else %}
+          Products
+        {% endif %}
+      </h1>
       <span class="text-muted small">{{ total }} results</span>
     </div>
+    {% if image_error %}
+    <div class="alert alert-danger">{{ image_error }}</div>
+    {% elif search_type == 'image' %}
+    <div class="alert alert-light border small">
+      Showing products similar to <strong>{{ uploaded_name or 'your image' }}</strong>.
+      <a href="/products">Clear image search</a>
+    </div>
+    {% endif %}
     <div class="row g-3">
       {% for p in products %}
         {% include "partials/product_card.html" %}
       {% else %}
-        <div class="col-12"><div class="alert alert-light border">No products found.</div></div>
+        <div class="col-12"><div class="alert alert-light border">
+          {% if search_type == 'image' and not image_error %}
+            No visually similar products found. Try a clearer product photo.
+          {% else %}
+            No products found.
+          {% endif %}
+        </div></div>
       {% endfor %}
     </div>
     {% if pages > 1 %}

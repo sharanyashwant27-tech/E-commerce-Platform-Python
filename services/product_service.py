@@ -250,6 +250,52 @@ class ProductService:
         result = await self.db.execute(query)
         return list(result.scalars().all()), total
 
+    async def search_by_image(
+        self,
+        image_bytes: bytes,
+        *,
+        limit: int = 24,
+        min_score: Optional[float] = None,
+    ) -> List[tuple]:
+        """Rank active catalog products by visual similarity to an uploaded image."""
+        from utils.image_search import (
+            DEFAULT_MIN_SCORE,
+            rank_by_image,
+            resolve_image_path,
+            signature_from_bytes,
+            signature_from_path,
+        )
+
+        try:
+            query_sig = signature_from_bytes(image_bytes)
+        except ValueError as exc:
+            raise ValidationError(str(exc)) from exc
+
+        products, _ = await self.list_products(page=1, page_size=200, active_only=True)
+        candidates = []
+        by_id = {}
+        for product in products:
+            by_id[product.id] = product
+            for image in product.images or []:
+                path = resolve_image_path(image.url)
+                if not path:
+                    continue
+                sig = signature_from_path(path)
+                if sig:
+                    candidates.append((product.id, sig))
+
+        threshold = DEFAULT_MIN_SCORE if min_score is None else min_score
+        ranked = rank_by_image(
+            query_sig, candidates, min_score=threshold, limit=limit
+        )
+        results: List[tuple] = []
+        for product_id, score in ranked:
+            product = by_id.get(product_id)
+            if product:
+                setattr(product, "match_score", round(score, 4))
+                results.append((product, round(score, 4)))
+        return results
+
     async def update_product(self, user: User, product_id: int, data: dict) -> Product:
         product = await self.get_product(product_id)
         seller = await self.get_seller_profile(user) if user.role.value != "admin" else None

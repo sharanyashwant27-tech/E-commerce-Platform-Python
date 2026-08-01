@@ -28,6 +28,7 @@ Production-ready Amazon/Flipkart-style marketplace built with **Clean Architectu
 ## Features
 
 - Product catalog: categories, variants, inventory, images
+- Image-based product search (upload a photo via nav camera or `POST /api/v1/products/search-by-image`)
 - Real-time inventory sync (Redis pub/sub + SSE) on product, seller, and admin pages
 - Multi-seller marketplace: storefronts, sold-by attribution, cart grouped by seller, admin approve/suspend
 - Shopping cart & wishlist
